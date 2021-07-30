@@ -109,8 +109,9 @@ for (i in 1:length(files)) {
 }
 
 nms <- names(Z4)
-#print('List names:')
-#print(nms)
+
+print('List names:')
+print(nms)
 n <- length(nms)
 vars <- rep('?',n); srcs <- vars; nems <- vars; sces <- vars; its <- vars
 for (i in 1:n) {
