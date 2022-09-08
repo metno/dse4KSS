@@ -1,54 +1,168 @@
-library(shiny)
-library(esd)
-
 # Choices for drop-downs
 # Show a tabset that includes a plot, summary, and
 # table view of the generated distribution
 
-t2m.locs <- sort(loc(Z4[[1]]$pca))
-pre.locs <- sort(loc(Z4[[2]]$pca))
-gcmnames <<- names(Z4[[1]])[-c(1,2,length(Z4[[1]]))]
-locs2 <- t2m.locs
+library(shiny)
+library(shinydashboard)
 
-navbarPage("The Nordic region climate atlas",
-           tabPanel("Maps", 
-                    plotOutput("maps", width = "100%", height = "80%"),
-                    column(4,
-                           selectInput("file1", 
-                                       label = "Results",
-                                       choices = nms,
-                                       selected = nms[1])),
-                    # column(2,
-                    #        sliderInput("lon1", 
-                    #                    label = "Longitudes",
-                    #                    min = 0, max = 30, value = c(0, 30))),
-                    # column(2,
-                    #        sliderInput("lat1", 
-                    #                    label = "Latitudes",
-                    #                    min = 55, max = 72, value = c(55, 72))),
-                    column(2,
-                           selectInput("fun1", 
-                                       label = "Time aggregation",
-                                       choices=c('mean','trend','max','min','sd'),selected='mean')),
-                    column(2,
-                           selectInput("funx1", 
-                                       label = "Ensemble aggregation",
-                                       choices=c('mean','sd','max','min'),selected='mean')),
-                    column(2,
-                           sliderInput("dates1", "Years", 
-                                       min=1950, max=2050, value= c(2049,2055),sep=""))
-           ),
-           tabPanel("Single location", 
-                    plotOutput("plot", width = "100%", height = "80%"),
-                    column(3,
-                           selectInput("file2", 
-                                       label = "Results",
-                                       choices = nms,
-                                       selected = nms[1])),
-                    column(3,
-                           uiOutput("location2")),
-                    column(2,
-                           sliderInput("dates2", "Years", 
-                                       min=1950, max=2050, value= c(1950,2050),sep=""))
-           )
+## Initial choice of region, variable etc
+reg0 <- "Nordic"
+var0 <- "pr"
+sce0 <- "ssp585"
+it0 <- "djf"
+
+sidebar <- dashboardSidebar(
+  sidebarMenu(
+    menuItem("Maps", tabName = "maps"),
+    menuItem("Single stations", tabName = "stations"),
+    menuItem("Cross validation", tabName = "xval"),
+    div(style = "font-size:10px",
+      selectInput("reg1",
+                  label = "Region",
+                  choices = unique(cats$region),
+                  selected = reg0),
+      selectInput("var1",
+                  label = "Variable",
+                  choices = as.vector(sapply(unique(cats$var), varname)),
+                  selected = varname(var0)),
+      selectInput("it1",
+                  label = "Season",
+                  choices = as.vector(sapply(unique(cats$it), seasonname)),
+                  selected = seasonname(it0)),
+      selectInput("sce1",
+                  label = "Scenario",
+                  choices = unique(cats$sce),
+                  selected = sce0)
+    ),
+    menuItem("Ensemble selection", tabName="spread",
+             div(style = "font-size:10px",
+                 actionButton("gcmall", 
+                              label = "All simulations", 
+                              width = '150px'
+                 ),
+                 actionButton("gcmone", 
+                              label = "One of each GCM", 
+                              width = '150px'
+                 ),
+                 checkboxGroupInput("gcms",
+                                    label = "Climate models",
+                                    choices = gcmnames[[var0]][[sce0]],
+                                    selected = gcmnames[[var0]][[sce0]],
+                                    inline=TRUE,
+                                    width='100%'
+                 )
+             )
+    )
+  )
 )
+
+tab.maps <- tabItem(
+  tabName = "maps",
+  h2("Maps"),
+  plotOutput("maps", width = "100%", height = "80%"),
+  downloadButton(label = "save", 
+                 outputId = "savemaps"),
+  br(),
+  br(),
+  fluidRow(
+    column(4,
+           selectInput("fun1", 
+                       label = "Time aggregation",
+                       choices=c('mean','trend','max','min','sd'),
+                       selected='trend')),
+    column(4,
+           selectInput("funx1",
+                       label = "Ensemble aggregation",
+                       choices=c('mean','sd','max','min'),
+                       selected='mean'))
+  ),
+  fluidRow(
+    column(5,
+           selectInput("dates1", 
+                       label="Years",
+                       choices=names(datelist),
+                       selected=names(datelist)[[1]])
+    ),
+    column(5,
+           sliderInput("maprange", label="Range of color scale",
+                       min=-30, max=50, step = 1, value=c(-5,20))
+    )
+  ),
+  br(),
+  h4("Robustness of trends"),
+  fluidRow(
+    column(10,
+           checkboxInput("robustness_map",
+                         label = "show robustness for the period 1950-2100",
+                         value = FALSE)
+    )
+  ),
+  fluidRow(
+    column(10,
+           numericInput("threshold_map",
+                        label = "same sign trend in X% of ensemble members",
+                        value = 95, min = 50, max = 100, step=1)
+    )
+  )
+)
+
+
+tab.station <- tabItem(
+  tabName = "stations",
+  h2("Single location"),
+  plotOutput("plot", width = "100%", height = "80%"),
+  downloadButton(label = "save", 
+                 outputId = "savest"),
+  br(),
+  fluidRow(
+    column(5,
+           selectInput("location2",
+                      label = "Location",
+                      choices = locs[[reg0]][[var0]]$label,
+                      selected = locs[[reg0]][[var0]]$label[[1]])
+    )
+  ),
+  fluidRow(
+    column(5,
+         sliderInput("dates2", "Years",
+                     min=1950, max=2100, value= c(1950,2100),sep="")
+    )
+  ),
+  fluidRow(
+    column(5,
+         sliderInput("tsrange", label="Range of color scale",
+                     min=-30, max=50, step = 1, value=c(-5,20))
+    )
+  )
+)
+
+
+tab.xval <- tabItem(
+  tabName = "xval",
+  h2("Cross validation"),
+  plotOutput("xval", width = "100%", height = "80%"),
+)
+
+
+
+body <- dashboardBody(
+  tabItems(
+    tab.maps,
+    tab.station,
+    tab.xval
+  )
+)
+
+header <- dashboardHeader(
+    title = "The Nordic region climate atlas",
+    titleWidth = '600px',
+    dropdownMenuOutput("messageMenu")
+)
+
+dashboardPage(
+    skin = HTML("blue"),
+    header,
+    sidebar,
+    body
+)
+

@@ -2,84 +2,172 @@
 shinyServer(function(input, output, session) {
   #countview <- reactiveValues(i = 1)
   
-  ## Try to get the location names to depend on whether temperature of precipitation stations
-  output$location2 <- renderUI({
-    ## Get the file names of the data
-    z <- Z4[[input$file2]]
-    locs <- loc(z$pca)
-    #updateSelectInput(session=session,inputId="locations2",choices=locs)
-    selectInput("location2", label = "Location",choices = locs,  selected = "OSLO BLINDERN")
+  var1 <- reactive({ varname(input$var1, long=FALSE) })
+  
+  it1 <- reactive({ seasonname(input$it1, long=FALSE) })
+  
+  observe({
+    choices <- gcmnames[[var1()]][[input$sce1]]
+    selected <- choices#input$gcms[input$gcms %in% choices]
+    updateCheckboxGroupInput(session, inputId = "gcms",
+                       label = "Climate models",
+                       choices = choices,
+                       selected = selected)
   })
   
+
+  observeEvent(input$gcmone, {
+    choices <- gcmnames[[var1()]][[input$sce1]]
+    gcm <- sapply(choices, function(x) strsplit(x, split=".r[0-9]{1,3}i[0-9]{1,3}")[[1]][1])
+    selected <- choices[!duplicated(gcm)]
+    updateCheckboxGroupInput(session, inputId = "gcms", choices = choices, 
+                             selected = selected)
+  })
+  
+  observeEvent(input$gcmall, {
+    choices <- gcmnames[[var1()]][[input$sce1]]
+    #gcm <- sapply(choices, function(x) strsplit(x, split=".r[0-9]{1,3}i[0-9]{1,3}")[[1]][1])
+    selected <- choices#[!duplicated(gcm)]
+    updateCheckboxGroupInput(session, inputId = "gcms", choices = choices, 
+                             selected = selected)
+  })
+  
+  observe({
+    val <- FALSE
+    if(input$fun1=="trend" & input$dates1=="1950-2100") {
+      val <- input$robustness_map
+    }
+    updateCheckboxInput(session, "robustness_map",
+                        label = "show robustness for the period 1950-2100",
+                        value = val)
+  })
+  
+  # run every time data is updated
+  observe({
+    if(input$location2 %in% locs[[input$reg1]][[var1()]]$label) {
+      sel <- input$location2
+    } else {
+      is <- grep(cleanstr(input$location2, "[0-9]"), 
+                 cleanstr(locs[[input$reg1]][[var1()]]$label, "[0-9]"))
+      if(length(is)>1) {
+        is <- is[[1]] 
+      } else if(length(is)==0) {
+        is <- 1
+      }
+      sel <- locs[[input$reg1]][[var1()]]$label[[is]]
+    }
+    updateSelectInput(session, "location2",
+                      choices = locs[[input$reg1]][[var1()]]$label, # update choices
+                      selected = sel) # remove selection
+  })
+
+  observe({
+    x <- sliderange(param=var1(), FUN=input$fun1)
+    xstep <- diff(pretty(range(x$minmax), n=22))[1]
+    updateSliderInput(session, "maprange", label="Range of color scale",
+                      min=min(x$minmax), max=max(x$minmax), 
+                      step=xstep, value=x$x)
+  })
+  
+  observe({
+    x <- sliderange(param=var1(), FUN="mean")
+    xstep <- diff(pretty(range(x$minmax), n=22))[1]
+    updateSliderInput(session, "tsrange", label="range of color scale",
+                      min=min(x$minmax), max=max(x$minmax), 
+                      step=xstep, value=x$x)
+  })
+  
+  zload_pc <- reactive({
+    Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
+                         it1(), input$sce1))
+    return(Z)
+  })
+  
+  zload_station <- reactive({
+    Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
+                         it1(), input$sce1))
+    y <- as.station(Z)
+    attr(y, "variable") <- attr(Z, "variable")
+    attr(y, "longname") <- attr(Z, "longname")
+    attr(y, "unit") <- attr(Z, "unit")
+    return(y)
+  })
+  
+  im <- reactive({
+    choices <- gcmnames[[var1()]][[input$sce1]]
+    im <- choices %in% input$gcms
+    return(im)
+  })
+  
+  it <- reactive({
+    return(datelist[[input$dates1]])
+  })
+  
+  maps <- reactive({
+    print('output$maps')
+    z <- zload_pc()
+    mapgridded(z, im=im(), it=it(),
+               FUN=input$fun1, FUNX=input$funx1, 
+               colbar=list(breaks=pretty(input$maprange, n=22)),
+               show.robustness = input$robustness_map,
+               threshold = input$threshold_map/100,
+               trends=T4[[input$reg1]][[var1()]][[input$sce1]][[it1()]])
+  })
   
   ## Show map of gridded temperature
-  output$maps <- renderPlot({ 
+  output$maps <- renderPlot({
     print('output$maps')
-    it <- range(as.numeric(input$dates1))
-    print(paste('it=',paste(it,collapse=' - ')))
-    z <- Z4[[input$file1]]
-    z <- subset(z,it=it)
-    z <- xmembers(z)
-    print(names(z))
-    print(range(index(z[[3]])))
-    FUN=input$fun1; FUNX <- input$funx1
-    info <- namesplit(input$file1)
-    #im <- is.element(gcmnames,input$im)
-    ## Extract the DSe results and exclude the info, PCA and EOF elements.
-    gcnames <- names(z)[-c(1,2,length(z))]
-    im <- is.character(gcmnames)
-    main <- paste('Downscaled',FUN,tolower(input$season1),tolower(input$param1),'for',it[1],'-',it[2],
-                  'following',toupper(input$rcp1),'based on',sum(im),'model runs')
-    
-    if ( (info$varid=='t2m') | (info$varid=='tsd') | (FUN=='trend') ) 
-      pal <- 't2m' else pal <- 'precip'
-    if ( ((info$varid=='mu') | (info$varid=='fw')) & (FUN=='trend') ) 
-      rev <- TRUE else rev <- FALSE
-    print('expand the data:')
-    fun <- FUN
-    if (FUNX=='mean') {
-      ## Faster response for ensemble mean
-      y <- expandpca(z,FUN=FUN,verbose=TRUE)
-      FUN <- 'mean'
-    } else 
-    y <- aggregate.dsensemble(z,FUN=FUNX,verbose=TRUE)
-    
-    main <- paste(info$varid,info$src,info$nem, info$sce, info$it, FUN)
-    print(main); print(str(y))
-    m <- map(y,FUN=FUN,plot=FALSE)
-    if (fun=='trend') breaks <- pretty(c(-abs(m),abs(m)),n=17) else
-      breaks <- pretty(m,n=17)
-    colbar <- list(pal=pal,breaks=breaks,rev=rev)
-    print(colbar)
-    map(m,main=main,type='fill',colbar=colbar,new=FALSE)
-  }, height=function(){0.6*session$clientData$output_maps_width})
-  
-  ## Plot individual station
-  output$plot <- renderPlot({
-    print('--- Plot individual station ---')
-    z <- Z4[[input$file2]]
-    it <- range(as.numeric(input$dates2))
-    z <- subset(z,it=it)
-    z <- xmembers(z)
-    #z$pca <- subset(z$pca,is=is)
-    locs2 <- loc(z$pca)
-    
-    if(!is.null(input$location2)) is <- grep(input$location2,locs2,ignore.case = TRUE) else is <- 1
-    print('input$location2')
-    print(input$location2)
-    gcnames <- names(z)[-c(1,2,length(z))]
+    z <- zload_pc()
+    mapgridded(z, im=im(), it=it(),
+               FUN=input$fun1, FUNX=input$funx1, 
+               colbar=list(breaks=pretty(input$maprange, n=22)),
+               show.robustness = input$robustness_map,
+               threshold = input$threshold_map/100,
+               trends=T4[[input$reg1]][[var1()]][[input$sce1]][[it1()]])
+  }, height=function(){1.0*session$clientData$output_maps_width})
 
-    z$eof <- NULL
-    print(is); print(class(as.station(z))); print(length(as.station(z))); 
-    #im <- is.element(gcmnames,input$im)
-    y <- as.station(z)[[is]]
-    info <- namesplit(input$file2)
-    main <- paste(info$varid,info$src,info$nem, info$sce, info$it)
-    print(class(y)); print(main); print(dim(y))
-    plot(y,main=main,target.show=FALSE,legend.show=FALSE,new=FALSE,
-         map.show=TRUE)
-  #index(y) <- year(y)
-  #lines(y,type='b',lwd=3,cex=1.2)
-  #plot(rnorm(100),main=main)
-}, height=function(){0.6*session$clientData$output_plot_width}) #600})
+  ## Show time series for individual stations
+  plotst <- reactive({
+    z <- zload_station()
+    stplot(z, is=input$location2, it=input$dates2, 
+           im=im(), ylim=input$tsrange)
   })
+
+  output$plot <- renderPlot({
+    z <- zload_station()
+    stplot(z, is=input$location2, it=input$dates2, im=im(),
+           ylim=input$tsrange)
+  }, height=function(){0.7*session$clientData$output_plot_width}) #600})
+  
+  ## Plot cross-validation histograms
+  output$xval <- renderPlot({
+    z <- zload_pc()
+    crossval(z, im=im())
+  }, height=function(){0.9*session$clientData$output_xval_width})
+  
+
+  output$savemaps <- downloadHandler(
+    filename = function() {
+      paste('downscaled', input$fun1, input$reg1, var1(),
+            input$it1, input$sce1, input$funx1, 'png', sep='.')
+    },
+    content = function(file) {
+      png(file = file)
+      maps()
+      dev.off()
+    }
+  )
+  
+  output$savest <- downloadHandler(
+    filename = function() {
+      paste('timeseries', input$reg1, var1(), input$it1, 
+            input$sce1, cleanstr(input$location2), 'png', sep='.')
+    },
+    content = function(file) {
+      png(file = file)
+      plotst()
+      dev.off()
+    }
+  )
+  
+})
