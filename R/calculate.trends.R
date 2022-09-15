@@ -10,7 +10,7 @@ path.data <- file.path(path.dse4KSS, "data")
 
 ## Support functions
 path.r <- file.path(path.dse4KSS, "R")
-source(file.path(path.r, "global.R"))
+source(file.path(path.r, "rtools.R"))
 
 ## New or updated files can be put elsewhere (not in path.data)
 ## and checked for errors before moving them into path.data
