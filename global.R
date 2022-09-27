@@ -1,16 +1,19 @@
-## Rasmus Benestad, Met Norway, 2016-11-02
-## R-shiny app that presents empirical-statistical downscaled results. The results include the CMIP5 ensemble simulations
-## for RCP4.5, RCP2.6, and RCP 8.5 for a number of stations and for the four different seasons. PCAs and EOFs have been used
-## to minimise the needed data volume, and this app expand information embedded in the PCAs/EOFs to corresponding information
-## in the form of station series or gridded maps.
+## K Parding, Met Norway, 2022-09-27
+## R-shiny app that presents empirical-statistical downscaled results.
 
-library(shiny)
-library(shinydashboard)
-library(esd)
+source("rtools.R")
+source("calculate.trends.R")
+
+datelist <- list("1950-2100" = c(1950,2100),
+                 "1950-1979" = c(1950,1979),
+                 "1981-2010" = c(1981,2010),
+                 "2031-2060" = c(2031,2060),
+                 "2071-2100" = c(2071,2100))
 
 ## Preparations - get a list of available results
 files.all <- list.files(path='data',pattern='dse.kss.',full.names = TRUE)
 files <- files.all
+
 
 file.trends <- list.files(path='data',pattern='trends.rda',full.names = TRUE)
 load(file.trends)

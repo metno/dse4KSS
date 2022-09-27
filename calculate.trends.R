@@ -1,20 +1,13 @@
 ## calculate.trends.R
-library(esd)
-
-## Set path to repository
-#path.dse4KSS <- "~/git/dse4KSS"
-path.dse4KSS <- getwd()
-
-## This is the path to the downscaled ensemble data 
-path.data <- file.path(path.dse4KSS, "data")
 
 ## Support functions
-path.r <- file.path(path.dse4KSS, "R")
-source(file.path(path.r, "rtools.R"))
+source("rtools.R")
+
+## This is the path to the downscaled ensemble data 
+path.data <- "data"
 
 ## New or updated files can be put elsewhere (not in path.data)
 ## and checked for errors before moving them into path.data
-#path.out <- file.path(path.dse4KSS, "test") 
 path.out <- path.data
 
 file.trends <- file.path(path.out, "trends.rda")
@@ -63,23 +56,23 @@ for(region in regions) {
   }
 }
 
-show.plots <- FALSE
-if(show.plots) {
-  for(region in names(trends)) {
-    for(variable in c("fw")) {
-      cb <- switch(variable, 
-                   "pr"=list(pal="burd", rev=TRUE, breaks=seq(-0.12,0.12,0.01)),
-                   "fw"=list(pal="burd", rev=TRUE, breaks=seq(-0.12,0.12,0.01)),
-                   "t2m"=list(pal="burd", rev=FALSE, breaks=seq(-0.6,0.6,0.02)),
-                   NULL)
-      for(scenario in c("rcp85", "ssp585")) {
-        for(season in c("djf")) {
-          trendmap.dsensemble(trends[[region]][[variable]][[scenario]][[season]], 
-                              significance="f", threshold=0.95, 
-                              colbar=cb, new=TRUE)
-          mtext(text=paste(region, scenario, season), side=3, line=0, adj=1)
-        }
-      }
-    }
-  }
-}
+# show.plots <- FALSE
+# if(show.plots) {
+#   for(region in names(trends)) {
+#     for(variable in c("fw")) {
+#       cb <- switch(variable, 
+#                    "pr"=list(pal="burd", rev=TRUE, breaks=seq(-0.12,0.12,0.01)),
+#                    "fw"=list(pal="burd", rev=TRUE, breaks=seq(-0.12,0.12,0.01)),
+#                    "t2m"=list(pal="burd", rev=FALSE, breaks=seq(-0.6,0.6,0.02)),
+#                    NULL)
+#       for(scenario in c("rcp85", "ssp585")) {
+#         for(season in c("djf")) {
+#           trendmap.dsensemble(trends[[region]][[variable]][[scenario]][[season]], 
+#                               significance="f", threshold=0.95, 
+#                               colbar=cb, new=TRUE)
+#           mtext(text=paste(region, scenario, season), side=3, line=0, adj=1)
+#         }
+#       }
+#     }
+#   }
+# }

@@ -15,12 +15,6 @@ library(esd)
 #source("~/git/esd/R/expandpca.R")
 #source("~/git/esd/R/aggregate.dsensemble.R")
 
-datelist <- list("1950-2100" = c(1950,2100),
-                 "1950-1979" = c(1950,1979),
-                 "1981-2010" = c(1981,2010),
-                 "2031-2060" = c(2031,2060),
-                 "2071-2100" = c(2071,2100))
-
 varname <- function(x, long=TRUE) {
   if(long) {
     y <- switch(x, 
