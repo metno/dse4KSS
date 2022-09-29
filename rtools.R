@@ -7,13 +7,9 @@
 library(shiny)
 library(shinydashboard)
 library(esd)
-#source("~/git/esd/R/crossval.R")
-#source("~/git/esd/R/plot.R")
-#source("~/git/esd/R/trend.dsensemble.R")
-#source("~/git/esd/R/as.station.R")
-#source("~/git/esd/R/subset.R")
-#source("~/git/esd/R/expandpca.R")
-#source("~/git/esd/R/aggregate.dsensemble.R")
+source("~/git/esd/R/as.station.R")
+source("~/git/esd/R/subset.station.R")
+source("~/git/esd/R/subset.R")
 
 varname <- function(x, long=TRUE) {
   if(long) {
@@ -25,11 +21,11 @@ varname <- function(x, long=TRUE) {
                 "tsd" = "temperature standard deviation", x)
   } else {
     y <- switch(x, 
-               "precipitation" = "pr", 
-               "wet-day mean" = "mu",
-               "wet-day frequency" = "fw",
-               "temperature" = "t2m",
-               "temperature standard deviation" = "tsd", x)
+                "precipitation" = "pr", 
+                "wet-day mean" = "mu",
+                "wet-day frequency" = "fw",
+                "temperature" = "t2m",
+                "temperature standard deviation" = "tsd", x)
   }
   return(y)
 }
@@ -59,6 +55,65 @@ cleanstr <- function(x, remove=NULL) {
   return(y)
 }
 
+
+## Script to extract members from DSensemble with 
+xmembers <- function(X,im=NULL,length=NULL,verbose=FALSE) {
+  if(verbose) print("xmembers")
+  x <- X
+  info <- X$info; X$info <- NULL
+  pca <- X$pca; X$pca <- NULL; eof <- X$eof; X$eof <- NULL
+  gcms <- attr(X, "model_id")
+  n <- length(names(X))
+  #im <- 20:100
+  ## Quality control
+  if (verbose) print(paste('Before quality control: original number of members=',n))
+  ix <- rep(TRUE, n)
+  ix[duplicated(gcms)] <- FALSE
+  if(!is.null(im)) {
+    if(is.logical(im) & length(im)==length(ix)) {
+      ix <- ix & im
+    } else if(is.numeric(im) & max(im)<=n) {
+      ix[-im] <- FALSE
+    }
+  }
+  for (i in seq(n,1,by=-1)) {
+    if (sum(is.finite(X[[i]]))==0) {
+      if(verbose) print(paste(i,'Remove bad results'))
+      ix[i] <- FALSE
+    } else if (max(abs(X[[i]]),na.rm=TRUE) > 10)  {
+      if(verbose) print(paste(i,'Remove suspect results'))
+      ix[i] < FALSE
+    }
+  }
+  
+  memsiz <- rep("?",n)
+  for (i in 1:n) 
+    memsiz[i] <- paste(dim(X[[i]]),collapse='x')
+  memsiztab <- table(memsiz)
+  memcats <- rownames(memsiztab)
+  if (verbose) {
+    print(memsiztab)
+    print(paste0('(',1:length(memcats),') ',memcats,collapse=' - '))
+  }
+  if (is.null(length)) {
+    memkeep <- rownames( memsiztab)[as.numeric(memsiztab)==max(as.numeric(memsiztab))]
+  } else memkeep <- memcats[grep(paste0(as.character(length),'x'),memcats)]
+  if (verbose) print(memkeep)
+  ix[!grepl(memkeep,memsiz)] <- FALSE
+  exclude <- sort((1:n)[!ix], decreasing=TRUE)
+  if (verbose) print(paste("Remove simulations short time series:",
+                           paste(exclude,collapse=" ")))
+  for (ix in exclude) {
+    x[[ix+2]] <- NULL
+    gcms <- gcms[-ix]
+  }
+  attr(x, "model_id") <- gcms
+  n <- length(names(x))
+  if (verbose) print(paste('New length of X is',n))
+  return(x)
+}
+
+
 zload <- function(path="data", 
                   pattern=c("dse.kss","Nordic","t2m","djf","ssp585"), 
                   verbose=FALSE) {
@@ -81,6 +136,7 @@ zload <- function(path="data",
     return(Z)
   } else return(NULL)
 }
+
 
 sliderange <- function(param=NULL, FUN=NULL) {
   if(is.null(param)) param <- "t2m"
@@ -126,11 +182,11 @@ mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
                        show.stations=TRUE, pch=19, cex=1, lwd=1,
                        show.robustness=TRUE,trends=NULL,threshold=0.9,
                        verbose=FALSE) { 
-  if(verbose) print('output$maps')
+  if(verbose) print('mapgridded')
+  
   if(is.null(it)) it <- range(year(Z[[3]]))
   if(verbose) print(paste('it=',paste(it,collapse=' - ')))
   z <- subset(Z, it=it, im=im)
-  if(verbose) print(names(z))
   
   if(is.null(main)) {
     main <- paste(FUN,tolower(season(Z$pca)[1]),
@@ -149,11 +205,11 @@ mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
   }
   if(is.null(colbar$rev)) {
     if ( FUN=='trend' & 
-       (attr(Z,"variable")[1]=='mu' | 
-        attr(Z,"variable")[1]=='fw' | 
-        attr(Z,"variable")[1]=='precip') ) colbar$rev <- TRUE else colbar$rev <- FALSE
+         (attr(Z,"variable")[1]=='mu' | 
+          attr(Z,"variable")[1]=='fw' | 
+          attr(Z,"variable")[1]=='precip') ) colbar$rev <- TRUE else colbar$rev <- FALSE
   }
-
+  
   if(verbose) print('expand the data:')
   if (FUNX=='mean') {
     ## Faster response for ensemble mean
@@ -229,63 +285,4 @@ stplot <- function(z, is=NULL, it=NULL, im=NULL, main=NULL,
        xrange=range(attr(z, "longitude"))+c(-5,5), ylim=ylim,
        yrange=range(attr(z, "latitude"))+c(-2,2), map.show=TRUE,
        mar=c(3,5,4,4))
-}
-
-
-
-## Script to extract members from DSensemble with 
-xmembers <- function(X,im=NULL,length=NULL,verbose=FALSE) {
-  if(verbose) print("xmembers")
-  x <- X
-  info <- X$info; X$info <- NULL
-  pca <- X$pca; X$pca <- NULL; eof <- X$eof; X$eof <- NULL
-  gcms <- attr(X, "model_id")
-  n <- length(names(X))
-  #im <- 20:100
-  ## Quality control
-  if (verbose) print(paste('Before quality control: original number of members=',n))
-  ix <- rep(TRUE, n)
-  ix[duplicated(gcms)] <- FALSE
-  if(!is.null(im)) {
-    if(is.logical(im) & length(im)==length(ix)) {
-      ix <- ix & im
-    } else if(is.numeric(im) & max(im)<=n) {
-      ix[-im] <- FALSE
-    }
-  }
-  for (i in seq(n,1,by=-1)) {
-    if (sum(is.finite(X[[i]]))==0) {
-      if(verbose) print(paste(i,'Remove bad results'))
-      ix[i] <- FALSE
-    } else if (max(abs(X[[i]]),na.rm=TRUE) > 10)  {
-      if(verbose) print(paste(i,'Remove suspect results'))
-      ix[i] < FALSE
-    }
-  }
-
-  memsiz <- rep("?",n)
-  for (i in 1:n) 
-    memsiz[i] <- paste(dim(X[[i]]),collapse='x')
-  memsiztab <- table(memsiz)
-  memcats <- rownames(memsiztab)
-  if (verbose) {
-    print(memsiztab)
-    print(paste0('(',1:length(memcats),') ',memcats,collapse=' - '))
-  }
-  if (is.null(length)) {
-    memkeep <- rownames( memsiztab)[as.numeric(memsiztab)==max(as.numeric(memsiztab))]
-  } else memkeep <- memcats[grep(paste0(as.character(length),'x'),memcats)]
-  if (verbose) print(memkeep)
-  ix[!grepl(memkeep,memsiz)] <- FALSE
-  exclude <- sort((1:n)[!ix], decreasing=TRUE)
-  if (verbose) print(paste("Remove simulations short time series:",
-                           paste(exclude,collapse=" ")))
-  for (ix in exclude) {
-    x[[ix+2]] <- NULL
-    gcms <- gcms[-ix]
-  }
-  attr(x, "model_id") <- gcms
-  n <- length(names(x))
-  if (verbose) print(paste('New length of X is',n))
-  return(x)
 }
