@@ -7,9 +7,6 @@
 library(shiny)
 library(shinydashboard)
 library(esd)
-source("~/git/esd/R/as.station.R")
-source("~/git/esd/R/subset.station.R")
-source("~/git/esd/R/subset.R")
 
 varname <- function(x, long=TRUE) {
   if(long) {
