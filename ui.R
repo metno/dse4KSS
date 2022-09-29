@@ -7,7 +7,7 @@ library(shinydashboard)
 
 ## Initial choice of region, variable etc
 reg0 <- "Nordic"
-var0 <- "pr"
+var0 <- "t2m"
 sce0 <- "ssp585"
 it0 <- "djf"
 
