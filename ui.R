@@ -16,42 +16,64 @@ sidebar <- dashboardSidebar(
     menuItem("Maps", tabName = "maps"),
     menuItem("Single stations", tabName = "stations"),
     menuItem("Cross validation", tabName = "xval"),
-    div(style = "font-size:10px",
-      selectInput("reg1",
-                  label = "Region",
-                  choices = unique(cats$region),
-                  selected = reg0),
-      selectInput("var1",
-                  label = "Variable",
-                  choices = as.vector(sapply(unique(cats$var), varname)),
-                  selected = varname(var0)),
-      selectInput("it1",
-                  label = "Season",
-                  choices = as.vector(sapply(unique(cats$it), seasonname)),
-                  selected = seasonname(it0)),
-      selectInput("sce1",
-                  label = "Scenario",
-                  choices = unique(cats$sce),
-                  selected = sce0)
-    ),
-    menuItem("Ensemble selection", tabName="spread",
+    menuItem("Settings plot 1", tabname="selection1",
              div(style = "font-size:10px",
-                 actionButton("gcmall", 
-                              label = "All simulations", 
-                              width = '150px'
-                 ),
-                 actionButton("gcmone", 
-                              label = "One of each GCM", 
-                              width = '150px'
-                 ),
-                 checkboxGroupInput("gcms",
-                                    label = "Climate models",
-                                    choices = gcmnames[[var0]][[sce0]],
-                                    selected = gcmnames[[var0]][[sce0]],
-                                    inline=TRUE,
-                                    width='100%'
-                 )
+                 selectInput("reg1",
+                             label = "Region",
+                             choices = unique(cats$region),
+                             selected = reg0),
+                 selectInput("var1",
+                             label = "Variable",
+                             choices = as.vector(sapply(unique(cats$var), varname)),
+                             selected = varname(var0)),
+                 selectInput("it1",
+                             label = "Season",
+                             choices = as.vector(sapply(unique(cats$it), seasonname)),
+                             selected = seasonname(it0)),
+                 selectInput("sce1",
+                             label = "Scenario",
+                             choices = unique(cats$sce),
+                             selected = sce0),
+                 selectInput("fun1", 
+                             label = "Time aggregation",
+                             choices=c('mean','trend','max','min','sd'),
+                             selected='mean'),
+                 selectInput("dates1", 
+                             label="Years",
+                             choices=names(datelist),
+                             selected=names(datelist)[[2]]),
+                 sliderInput("maprange", label="Range of color scale",
+                             min=-30, max=50, step = 1, value=c(-5,20))
              )
+    ),
+    menuItem("Settings plot 2", tabname="selection2",
+             div(style = "font-size:10px",
+                 selectInput("reg2",
+                             label = "Region",
+                             choices = unique(cats$region),
+                             selected = reg0),
+                 selectInput("var2",
+                             label = "Variable",
+                             choices = as.vector(sapply(unique(cats$var), varname)),
+                             selected = varname(var0)),
+                 selectInput("it2",
+                             label = "Season",
+                             choices = as.vector(sapply(unique(cats$it), seasonname)),
+                             selected = seasonname(it0)),
+                 selectInput("sce2",
+                             label = "Scenario",
+                             choices = unique(cats$sce),
+                             selected = sce0),
+                 selectInput("fun2", 
+                             label = "Time aggregation",
+                             choices=c('mean','trend','max','min','sd'),
+                             selected='mean'),
+                 selectInput("dates2", 
+                             label="Years",
+                             choices=names(datelist),
+                             selected=names(datelist)[[length(datelist)]]),
+                 sliderInput("maprange2", label="Range of color scale",
+                             min=-30, max=50, step = 1, value=c(-5,20)))
     )
   )
 )
@@ -59,49 +81,88 @@ sidebar <- dashboardSidebar(
 tab.maps <- tabItem(
   tabName = "maps",
   h2("Maps"),
-  plotOutput("maps", width = "100%", height = "80%"),
-  downloadButton(label = "save", 
-                 outputId = "savemaps"),
-  br(),
-  br(),
   fluidRow(
-    column(4,
-           selectInput("fun1", 
-                       label = "Time aggregation",
-                       choices=c('mean','trend','max','min','sd'),
-                       selected='trend')),
-    column(4,
-           selectInput("funx1",
-                       label = "Ensemble aggregation",
-                       choices=c('mean','sd','max','min'),
-                       selected='mean'))
-  ),
-  fluidRow(
-    column(5,
-           selectInput("dates1", 
-                       label="Years",
-                       choices=names(datelist),
-                       selected=names(datelist)[[1]])
+    column(6,
+           plotOutput("maps", width = "100%", height = "80%"),
+           downloadButton(label = "save", 
+                          outputId = "savemaps"),
+           br(),
+           textOutput("main1"),
+           br(),
+           div(style = "font-size:10px",
+               checkboxInput("field1",
+                             label = "show field",
+                             value = TRUE),
+               checkboxInput("stations1",
+                             label = "show stations",
+                             value = TRUE),
+               checkboxInput("robustness_map",
+                             label = "show trend robustness for the period 1950-2100 (same sign in 90% of ensemble members)",
+                             value = FALSE)),
+           box(
+             title = HTML("<font size=-0.5 color='black'><b>Ensemble selection</b></font>"),
+             width = '100%' ,
+             status = 'primary',
+             collapsible = TRUE,
+             collapsed = TRUE,
+             div(style = "font-size:10px",
+                 actionButton("gcmall",
+                              label = "All simulations",
+                              width = '150px'
+                 ),
+                 actionButton("gcmone",
+                              label = "One of each GCM",
+                              width = '150px'
+                 ),
+                 br(),
+                 checkboxGroupInput("gcms",
+                                    label = "Climate models",
+                                    choices = gcmnames[[var0]][[sce0]],
+                                    selected = gcmnames[[var0]][[sce0]],
+                                    inline=TRUE,
+                                    width='100%'
+                 )))
     ),
-    column(5,
-           sliderInput("maprange", label="Range of color scale",
-                       min=-30, max=50, step = 1, value=c(-5,20))
-    )
-  ),
-  br(),
-  h4("Robustness of trends"),
-  fluidRow(
-    column(10,
-           checkboxInput("robustness_map",
-                         label = "show robustness for the period 1950-2100",
-                         value = FALSE)
-    )
-  ),
-  fluidRow(
-    column(10,
-           numericInput("threshold_map",
-                        label = "same sign trend in X% of ensemble members",
-                        value = 95, min = 50, max = 100, step=1)
+    column(6,
+           plotOutput("maps2", width = "100%", height = "80%"),
+           downloadButton(label = "save", 
+                          outputId = "savemaps2"),
+           br(),
+           textOutput("main2"),
+           br(),
+           div(style = "font-size:10px",
+               checkboxInput("field2",
+                             label = "show field",
+                             value = TRUE),
+               checkboxInput("stations2",
+                             label = "show stations",
+                             value = TRUE),
+               checkboxInput("robustness_map2",
+                             label = "show trend robustness for the period 1950-2100 (same sign in 90% of ensemble members)",
+                             value = FALSE)),
+           box(
+             title = HTML("<font size=-0.5 color='black'><b>Ensemble selection</b></font>"),
+             width = '100%' ,
+             status = 'primary',
+             collapsible = TRUE,
+             collapsed = TRUE,
+             div(style = "font-size:10px",
+                 actionButton("gcmall2",
+                              label = "All simulations",
+                              width = '150px'
+                 ),
+                 actionButton("gcmone2",
+                              label = "One of each GCM",
+                              width = '150px'
+                 ),
+                 br(),
+                 checkboxGroupInput("gcms2",
+                                    label = "Climate models",
+                                    choices = gcmnames[[var0]][[sce0]],
+                                    selected = gcmnames[[var0]][[sce0]],
+                                    inline=TRUE,
+                                    width='100%'
+                 )))
     )
   )
 )
@@ -117,21 +178,27 @@ tab.station <- tabItem(
   fluidRow(
     column(5,
            selectInput("location2",
-                      label = "Location",
-                      choices = locs[[reg0]][[var0]]$label,
-                      selected = locs[[reg0]][[var0]]$label[[1]])
+                       label = "Location",
+                       choices = locs[[reg0]][[var0]]$label,
+                       selected = locs[[reg0]][[var0]]$label[[1]])
+    )
+  ),
+  #fluidRow(
+  #  column(5,
+  #         sliderInput("dates2", "Years",
+  #                     min=1950, max=2100, value= c(1950,2100),sep="")
+  #  )
+  #),
+  fluidRow(
+    column(5,
+           sliderInput("tsrange1", label="Range of color scale",
+                       min=-30, max=50, step = 1, value=c(-5,20))
     )
   ),
   fluidRow(
     column(5,
-         sliderInput("dates2", "Years",
-                     min=1950, max=2100, value= c(1950,2100),sep="")
-    )
-  ),
-  fluidRow(
-    column(5,
-         sliderInput("tsrange", label="Range of color scale",
-                     min=-30, max=50, step = 1, value=c(-5,20))
+           sliderInput("tsrange2", label="Range of color scale",
+                       min=-30, max=50, step = 1, value=c(-5,20))
     )
   )
 )
@@ -154,15 +221,15 @@ body <- dashboardBody(
 )
 
 header <- dashboardHeader(
-    title = "The Nordic region climate atlas",
-    titleWidth = '600px',
-    dropdownMenuOutput("messageMenu")
+  title = "The Nordic region climate atlas",
+  titleWidth = '600px',
+  dropdownMenuOutput("messageMenu")
 )
 
 dashboardPage(
-    skin = HTML("blue"),
-    header,
-    sidebar,
-    body
+  skin = HTML("blue"),
+  header,
+  sidebar,
+  body
 )
 

@@ -128,7 +128,13 @@ zload <- function(path="data",
     } else if('fw' %in% pattern) {
       attr(Z, "variable") <- "fw"
       attr(Z, "longname") <- "wet-day frequency"
-      attr(Z, "unit") <- "fraction of days"
+      attr(Z, "unit") <- "%"
+      if(max(Z, na.rm=TRUE)<=1) {
+        cz <- coredata(Z)*100
+        coredata(Z) <- cz
+      }
+    } else if('t2m' %in% pattern) {
+      attr(Z, "unit") <- "degree*C"
     }
     return(Z)
   } else return(NULL)
@@ -141,14 +147,16 @@ sliderange <- function(param=NULL, FUN=NULL) {
   if(FUN=="trend") {
     minmax <- switch(param,
                      "pr"=c(-0.8,0.8),
-                     "fw"=c(-0.04,0.04),
+                     #"fw"=c(-0.04,0.04),
+                     "fw"=c(-4,4), # % instead of fraction
                      "mu"=c(-0.8,0.8),
                      "t2m"=c(-1.5,1.5),
                      "tsd"=c(0.5,0.5),
                      c(-1,1))
     x <- switch(param,
                 "pr"=c(-0.4,0.4),
-                "fw"=c(-0.01,0.01),
+                #"fw"=c(-0.01,0.01),
+                "fw"=c(-1,1), # % instead of fraction
                 "mu"=c(-0.1,0.1),
                 "t2m"=c(-1,1),
                 "tsd"=c(-0.05,0.05),
@@ -156,14 +164,16 @@ sliderange <- function(param=NULL, FUN=NULL) {
   } else {
     minmax <- switch(param,
                      "pr"=c(0,25),
-                     "fw"=c(0,1),
+                     #"fw"=c(0,1),
+                     "fw"=c(0,100), # % instead of fraction
                      "mu"=c(0,25),
                      "t2m"=c(-40,40),
                      "tsd"=c(0,15),
                      c(-30,50))
     x <- switch(param,
                 "pr"=c(0,15),
-                "fw"=c(0,1),
+                #"fw"=c(0,1),
+                "fw"=c(0,100), # % instead of fraction
                 "mu"=c(0,15),
                 "t2m"=c(-15,30),
                 "tsd"=c(0,5),
@@ -176,7 +186,8 @@ sliderange <- function(param=NULL, FUN=NULL) {
 ## Gridded maps
 mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
                        it=NULL, im=NULL, main=NULL, colbar=NULL,
-                       show.stations=TRUE, pch=19, cex=1, lwd=1,
+                       show.field=TRUE, show.stations=TRUE, 
+                       pch=19, cex=1, lwd=1,
                        show.robustness=TRUE,trends=NULL,threshold=0.9,
                        verbose=FALSE) { 
   if(verbose) print('mapgridded')
@@ -185,16 +196,16 @@ mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
   if(verbose) print(paste('it=',paste(it,collapse=' - ')))
   z <- subset(Z, it=it, im=im)
   
-  if(is.null(main)) {
-    main <- paste(FUN,tolower(season(Z$pca)[1]),
-                  attr(Z,"variable")[1],'for',it[1],'-',it[2],
-                  '\ndownscaled with', 
-                  gsub("_", " ", 
-                       gsub("_mon|.nc", "", basename(attr(Z, "predictor_file")))),
-                  '&', toupper(attr(Z, "scenario")), 
-                  paste0('(',length(z)-3),'model runs)')
-  }
+  if(is.null(main)) main <- " "
+    #main <- paste(FUN,tolower(season(Z$pca)[1]),
+    #              attr(Z,"variable")[1],'for',it[1],'-',it[2],
+    #              '\ndownscaled with', 
+    #              gsub("_", " ", 
+    #                   gsub("_mon|.nc", "", basename(attr(Z, "predictor_file")))),
+    #              '&', toupper(attr(Z, "scenario")), 
+    #              paste0('(',length(z)-3),'model runs)')
   
+  colbar$show <- TRUE
   if(is.null(colbar$pal)) {
     if ( (attr(Z,"variable")[1]=='t2m') | 
          (attr(Z,"variable")[1]=='tsd') | 
@@ -207,6 +218,8 @@ mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
           attr(Z,"variable")[1]=='precip') ) colbar$rev <- TRUE else colbar$rev <- FALSE
   }
   
+  xlim <- range(lon(Z$pca)) + diff(range(lon(Z$pca)))*c(-1,1)/5
+  ylim <- range(lat(Z$pca)) + diff(range(lat(Z$pca)))*c(-1,1)/5
   if(verbose) print('expand the data:')
   if (FUNX=='mean') {
     ## Faster response for ensemble mean
@@ -223,38 +236,74 @@ mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
       colbar$breaks <- pretty(m,n=17)
   }
   if(verbose) print(colbar)
-  map(m,main=main,type='fill',colbar=colbar,FUN="mean",new=FALSE)
+    
+  if(FUN=="trend") {
+    attr(m, "unit") <- paste0(attr(z, "unit"),"/decade")
+    attr(m, "variable") <- paste0(attr(z, "variable")," trend")
+  } else {
+    attr(m, "unit") <- attr(z, "unit")
+    attr(m, "variable") <- attr(z, "variable")
+  }
+  
+  if (FUNX=='mean') {
+    ## Faster response for ensemble mean
+    y2 <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=FALSE,verbose=TRUE)
+    m2 <- map.station(y2,FUN='mean',plot=FALSE) 
+    # using map.station to override tendency from esd to redirect to map.default
+  } else {
+    y2 <- aggregate.dsensemble(z,FUN=FUNX,eof=FALSE,verbose=TRUE)
+    m2 <- map.station(y2,FUN=FUN,plot=FALSE)
+  }
+  if(show.field) {
+    map(m,main=main,type="fill",colbar=colbar,FUN="mean",
+        xlim=xlim,ylim=ylim,new=FALSE,cex.sub=0.8)
+  } else {
+    map(m,main=main,colbar=NULL,type="contour",FUN="mean",
+        xlim=xlim,ylim=ylim,new=FALSE)
+    par(xaxt="s",yaxt="s",las=1,col.axis='grey',col.lab='grey',
+        cex.lab=0.7,cex.axis=0.7)
+    axis(2,at=pretty(lat(Z$pca)),col='grey')
+    axis(3,at=pretty(lon(Z$pca)),col='grey')
+    par(col.axis='black',col.lab='black',
+        cex.lab=0.5,cex.axis=0.5)
+    image.plot(breaks=colbar$breaks,
+               lab.breaks=colbar$breaks,horizontal = TRUE,
+               legend.only = TRUE, zlim = range(colbar$breaks),
+               col = colbar$col, legend.width = 1,
+               axis.args = list(cex.axis = 1,hadj = 0.5,mgp = c(0, 0.5, 0)), border = FALSE)
+  }
   if(show.stations) {
     if (FUNX=='mean') {
       ## Faster response for ensemble mean
-      y <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=FALSE,verbose=TRUE)
-      m <- map(y,FUN='mean',plot=FALSE)
+      y2 <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=FALSE,verbose=TRUE)
+      m2 <- map.station(y2,FUN='mean',plot=FALSE) 
+      # using map.station to override tendency from esd to redirect to map.default
     } else {
-      y <- aggregate.dsensemble(z,FUN=FUNX,eof=FALSE,verbose=TRUE)
-      m <- map(y,FUN=FUN,plot=FALSE)
+      y2 <- aggregate.dsensemble(z,FUN=FUNX,eof=FALSE,verbose=TRUE)
+      m2 <- map.station(y2,FUN=FUN,plot=FALSE)
     }
     ## calculate color 
-    colbar <- colbar.ini(m, colbar=colbar)
+    colbar <- colbar.ini(m2, colbar=colbar)
     if (verbose) print('Set colour scheme')
     wr <- round(strtoi(paste('0x',substr(colbar$col,2,3),sep=''))/255,2)
     wg <- round(strtoi(paste('0x',substr(colbar$col,4,5),sep=''))/255,2)
     wb <- round(strtoi(paste('0x',substr(colbar$col,6,7),sep=''))/255,2)
-    col <- rep(colbar$col[1],length(m))
-    for (i in 1:length(m)) {
+    col <- rep(colbar$col[1],length(m2))
+    for (i in 1:length(m2)) {
       ii <- round(approx(0.5*(colbar$breaks[-1]+colbar$breaks[-length(colbar$breaks)]),
                          1:length(colbar$col),
-                         xout=as.vector(m)[i],rule=2)$y)
+                         xout=as.vector(m2)[i],rule=2)$y)
       if (is.finite(ii)) {
         if (ii < 1) ii <- 1
         if (ii > length(colbar$col)) ii <- length(colbar$col)
         col[i] <- rgb(wr[ii],wg[ii],wb[ii],0.7)
       } else col[i] <- rgb(0.5,0.5,0.5,0.2)
     }
-    points(lon(y), lat(y), col=col, pch=19, cex=cex, lwd=lwd)
+    points(lon(y2), lat(y2), col=col, pch=19, cex=cex, lwd=lwd)
     if(show.robustness & FUN=='trend' & !is.null(trends)) {
       sig <- apply(trends[im,], 2, function(x) max(sum(x>0), sum(x<0))/length(x))
       s <- sig>=threshold
-      points(lon(y)[s], lat(y)[s], col='black', pch=21, cex=cex, lwd=lwd)
+      points(lon(y2)[s], lat(y2)[s], col='black', pch=21, cex=cex, lwd=lwd)
     }
   }
 }
