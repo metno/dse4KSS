@@ -136,6 +136,7 @@ zload <- function(path="data",
     } else if('t2m' %in% pattern) {
       attr(Z, "unit") <- "degree*C"
     }
+    attr(Z, "season") <- season(Z$pca)
     return(Z)
   } else return(NULL)
 }
@@ -184,7 +185,7 @@ sliderange <- function(param=NULL, FUN=NULL) {
 
 
 ## Gridded maps
-mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
+mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
                        it=NULL, im=NULL, main=NULL, colbar=NULL,
                        show.field=TRUE, show.stations=TRUE, 
                        pch=19, cex=1, lwd=1,
@@ -192,6 +193,7 @@ mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
                        verbose=FALSE) { 
   if(verbose) print('mapgridded')
   
+  if(MET=='ESD') {
   if(is.null(it)) it <- range(year(Z[[3]]))
   if(verbose) print(paste('it=',paste(it,collapse=' - ')))
   z <- subset(Z, it=it, im=im)
@@ -306,12 +308,127 @@ mapgridded <- function(Z, FUN='mean', FUNX='mean', eof=TRUE,
       points(lon(y2)[s], lat(y2)[s], col='black', pch=21, cex=cex, lwd=lwd)
     }
   }
+  } else if(MET=="RCM") {
+    if(is.null(it) | FUN == "trend") it <- c(1950,2100)
+    if(verbose) print(paste('it=',paste(it,collapse=' - ')))
+    
+    param <- attr(Z,"variable")[1]
+    if (param == "precip") param <- "pr"
+    
+    season <- toupper(season(Z$pca))[1]
+    scenario <- tolower(attr(Z, "scenario"))
+    
+    #Map function and parameter to filename strings
+    FUNXfn <- FUNX #function in filename
+    if(FUNXfn == "sd") FUNXfn <- "var"
+    
+    paramfn <- varname(param,long=FALSE)
+    #if(paramfn %in% c("fw","mu")) paramfn <- "pr"
+    # if(paramfn %in% c("t2m","tsd")) paramfn <- "tas"
+    if(paramfn %in% c("t2m")) paramfn <- "tas"
+    
+    
+    data.dir <- "data/rcm/" #link to /lustre/storeB/users/andreasd/KiN_2023_data/ESDandRCM4KSS/Nordic/rcm
+    filename <- paste0("ens",FUNXfn,"_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+    
+    if (FUN =="trend")
+    {
+      filename <- paste0("ens",FUNXfn,"_trend_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+    }
+    
+    ncfile <- paste0(data.dir,filename)
+    if(verbose) print(paste("Getting",param,"from",ncfile))
+    
+    nc <- nc_open(ncfile)
+    Z = ncvar_get(nc,paramfn)
+    nc_close(nc)
+    
+    if (FUN == "trend") Z <- Z*10 # trends per decade
+    if (FUNX == "sd") Z <- sqrt(Z) # var to sd
+    
+    if (param == "pr") Z <- Z*3600*24 # mm/s to mm/day
+    if (param == "t2m" & FUNX != "sd" & FUN != "trend") Z <- Z-273.15 #K to °C
+    if (param %in% c("tsd","fw","mu")) Z <- Z*0 # not yet available
+    
+    scenarios <- c("rcp26","rcp45","rcp85")
+    si <- which(scenarios == scenario)
+    scenruns <- c(25,23,60) #number of runs in rcp26,rcp45,rcp85
+    
+    units <- switch(param,
+                    "pr" = "mm/day",
+                    "t2m"= "°C",
+                    "tsd"= "°C",
+                    "fw"= "1",
+                    "mu"="mm/day"
+    )
+    
+    if (FUN == "trend") units <- paste(units,"per decade")
+    
+    if(is.null(main)) {
+      main <- " "#paste(FUN,tolower(season),param,'for',it[1],'-',it[2],"following",scenario,'scenario\n(Ensemble',FUNX,'of',scenruns[si],'CORDEX runs)')
+    }
+    
+    if(is.null(colbar$pal)) {
+      if ( (param=='t2m') | 
+           (param=='tsd') | 
+           (FUN=='trend') ) colbar$pal <- 't2m' else colbar$pal <- 'precip'
+    }
+    if(is.null(colbar$rev)) {
+      if ( FUN=='trend' & 
+           (param=='mu' | 
+            param=='fw' | 
+            param=='pr') ) colbar$rev <- TRUE else colbar$rev <- FALSE
+    }
+    
+    tidx <- which(1950:2100 %in% it)
+    
+    if (FUN != "trend") Z <- apply(Z[,,tidx[1]:tidx[2]],c(1,2),FUN)
+    
+    ## set breaks here
+    if(is.null(colbar$breaks)) {
+      if(FUN=='trend') colbar$breaks <- pretty(c(-abs(Z),abs(Z)),n=17) else 
+        colbar$breaks <- pretty(Z,n=17)
+    }
+    #if(verbose) print(colbar)
+    colours = colscal(n=length(colbar$breaks)-1,pal=colbar$pal)
+    if (colbar$rev) colours <- rev(colours)
+    
+    par(mgp=c(0.5,0.2,0), mar=c(1.5,0.5,1.5,0.5))
+    image.plot(1:(dim(Z)[1]),1:(dim(Z)[2]),Z,main=main,col=colours,xaxt="n",yaxt="n",
+               zlim=range(colbar$breaks),xlab="",ylab="",horizontal=TRUE)
+    mtext(side=1, text=paste0("[",units,"]"),cex=1,font=2)
+    
+    #coastline
+    nc <- nc_open(paste0(data.dir,"remapbil_sftlf_gthalf_EUR-11_MPI-M-MPI-ESM-LR_rcp85_r0i0p0_CLMcom-CCLM4-8-17_v1_fx.nc"))
+    cl <- ncvar_get(nc,"sftlf")
+    nc_close(nc)
+    
+    contour(1:(dim(Z)[1]),1:(dim(Z)[2]),cl, levels=1,add=TRUE,drawlabels = F )
+    
+    if(show.robustness & FUN=='trend')
+    {
+      filename <- paste0("ensmean_postrend_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+      
+      ncfile <- paste0(data.dir,filename)
+      if(verbose) print(paste("Getting trend robustness",param,"from",ncfile))
+      
+      nc <- nc_open(ncfile)
+      sig <- ncvar_get(nc,paramfn)
+      nc_close(nc)
+      
+      s <- sig>=threshold | sig <= (1-threshold)
+      if(param %in% c("t2m","pr"))
+      {
+        points(which(s,arr.ind=T),pch=".",col=rgb(0,0,0,0.4))
+      }
+    }
+  }
 }
 
 
 ## Plot individual station
 stplot <- function(z, is=NULL, it=NULL, im=NULL, main=NULL, 
-                   ylim=NULL, verbose=FALSE) {
+                   MET="ESD", ylim=NULL, verbose=FALSE) {
   if(verbose) print('--- Plot individual station ---')
   if(!inherits(z, "station")) z <- as.station(z)
   if(is.null(is)) {
@@ -327,8 +444,107 @@ stplot <- function(z, is=NULL, it=NULL, im=NULL, main=NULL,
     it <- range(as.numeric(it))
   }
   y <- subset(z, is=is, it=it, im=im)
-  plot(y, target.show=FALSE, legend.show=FALSE, new=FALSE, #main=main,
+  if(MET=="ESD") {
+    plot(y, target.show=FALSE, legend.show=FALSE, new=FALSE, #main=main,
        xrange=range(attr(z, "longitude"))+c(-5,5), ylim=ylim,
        yrange=range(attr(z, "latitude"))+c(-2,2), map.show=TRUE,
        mar=c(3,5,4,4))
+  } else if(MET=="RCM"){
+    param <- attr(y,"variable")[1]
+    season <- toupper(attr(z, "season"))[1]
+    scenario <- tolower(attr(y, "scenario"))     
+    
+    lonst <- abs(attr(y, "longitude"))
+    latst <- abs(attr(y, "latitude"))
+    
+    paramfn <- varname(param,long=FALSE)
+    if (param == "precip") paramfn <- "pr"
+    
+    if(paramfn %in% c("fw","mu")) paramfn <- "pr"
+    if(paramfn %in% c("t2m","tsd")) paramfn <- "tas"
+    
+    years <- 1950:2100
+    tidx <- which(years %in% it)
+    yr <- years[years>=min(it) & years<=max(it)]
+    
+    data.dir <- "data/rcm/" #link to /lustre/storeB/users/andreasd/KiN_2023_data/ESDandRCM4KSS/Nordic/rcm
+    ## Mean value
+    filename <- paste0("ensmean_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+    ncfile <- paste0(data.dir,filename)
+    if(verbose) print(paste("Getting",paramfn,"from",ncfile))
+    
+    nc <- nc_open(ncfile)
+    lonrcm <- ncvar_get(nc,"lon")
+    latrcm <- ncvar_get(nc,"lat")
+    
+    #Calculate the distance to the point for every grid box
+    dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
+    #find the indices with the minimum distance
+    idx <- which(dist==min(dist),arr.ind=T)
+    
+    rcm <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
+    nc_close(nc)
+    
+    ## Max value
+    filename <- paste0("ensmax_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+    ncfile <- paste0(data.dir,filename)
+    if(verbose) print(paste("Getting",paramfn,"from",ncfile))
+    
+    nc <- nc_open(ncfile)
+    lonrcm <- ncvar_get(nc,"lon")
+    latrcm <- ncvar_get(nc,"lat")
+    
+    #Calculate the distance to the point for every grid box
+    dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
+    #find the indices with the minimum distance
+    idx <- which(dist==min(dist),arr.ind=T)
+    
+    rcm.max <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
+    nc_close(nc)
+    
+    ## Max value
+    filename <- paste0("ensmin_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+    ncfile <- paste0(data.dir,filename)
+    if(verbose) print(paste("Getting",paramfn,"from",ncfile))
+    
+    nc <- nc_open(ncfile)
+    lonrcm <- ncvar_get(nc,"lon")
+    latrcm <- ncvar_get(nc,"lat")
+    
+    #Calculate the distance to the point for every grid box
+    dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
+    #find the indices with the minimum distance
+    idx <- which(dist==min(dist),arr.ind=T)
+    
+    rcm.min <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
+    nc_close(nc)
+    
+    if (paramfn == "pr") {
+      rcm <- rcm*3600*24 # mm/s to mm/day
+      rcm.max <- rcm.max*3600*24 # mm/s to mm/day
+      rcm.min <- rcm.min*3600*24 # mm/s to mm/day
+      unit <- "mm/day"
+    }
+    if (param == "t2m") {
+      rcm <- rcm-273.15 #K to °C
+      rcm.max <- rcm.max-273.15 #K to °C
+      rcm.min <- rcm.min-273.15 #K to °C
+      unit <- "deg*C"
+    }
+    if (param %in% c("tsd","fw","mu")) {
+      rcm <- rcm*NA # not yet available
+      rcm.max <- rcm.max*NA # not yet available
+      rcm.min <- rcm.min*NA # not yet available
+      unit <- NA
+    }
+
+    rcm <- as.station(as.zoo(rcm, order.by=yr), param = param, unit = unit)
+    rcm.max <- as.station(as.zoo(rcm.max, order.by=yr), param = param, unit = unit)
+    rcm.min <- as.station(as.zoo(rcm.min, order.by=yr), param = param, unit = unit)
+    plot(rcm, new=FALSE, ylim=ylim, mar=c(3,5,4,4),type="l",col="navy",main=loc(y))
+    grid()
+    lines(rcm.max, col="black", lty=2)
+    lines(rcm.min, col="black", lty=2)
+  }
+  
 }

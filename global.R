@@ -7,8 +7,8 @@ source("calculate.trends.R")
 #source("~/git/esd/R/map.R")
 #source("~/git/esd/R/map.station.R")
 
-datelist <- list("1950-2100" = c(1950,2100),
-                 "1950-1979" = c(1950,1979),
+datelist <- list("1951-2100" = c(1951,2100),
+                 "1951-1980" = c(1951,1980),
                  "1981-2010" = c(1981,2010),
                  "2031-2060" = c(2031,2060),
                  "2071-2100" = c(2071,2100))
@@ -99,4 +99,3 @@ scenarios <- unique(sces)
 scenarios <- paste(toupper(scenarios), 
                    c("(CMIP5)","(CMIP6)")[as.numeric(grepl("SSP", scenarios))+1])
 names(scenarios) <- unique(sces)
-
