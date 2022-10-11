@@ -358,7 +358,7 @@ shinyServer(function(input, output, session) {
                  trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
     } else if(grepl("stations", tolower(input$plottype))) {
       z <- zload_station_2()
-      stplot(z, is=input$location, it=it2(), im=im2(),
+      stplot(z, is=input$location2, it=it2(), im=im2(),
              MET=input$src2, ylim=input$valrange1)
     } else if(grepl("cross", tolower(input$plottype))) {
       z <- zload_pc_2()
@@ -404,7 +404,7 @@ shinyServer(function(input, output, session) {
                  trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
     } else if(grepl("stations", tolower(input$plottype))) {
       z <- zload_station_2()
-      stplot(z, is=input$location, it=it2(), im=im2(),
+      stplot(z, is=input$location2, it=it2(), im=im2(),
              MET=input$src2, ylim=input$valrange1)
     } else if(grepl("cross", tolower(input$plottype))) {
       z <- zload_pc_2()
