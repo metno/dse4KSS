@@ -6,9 +6,9 @@ library(shiny)
 
 ## Initial choice of region, variable etc
 reg0 <- "Nordic"
-var0 <- "t2m"
+var0 <- "pr"
 sce0 <- "rcp85"
-it0 <- "mam"
+it0 <- "djf"
 
 sidebar <- dashboardSidebar(
   sidebarMenu(
@@ -79,14 +79,17 @@ sidebar <- dashboardSidebar(
              div(style = "font-size:10px",
                  h5("Maps"),
                  checkboxInput("field",
-                               label = "show field",
+                               label = "show field (ESD)",
                                value = TRUE),
                  checkboxInput("stations",
-                               label = "show stations",
+                               label = "show stations (ESD)",
+                               value = TRUE),
+                 checkboxInput("landmask",
+                               label = "mask ocean (RCM)",
                                value = TRUE),
                  checkboxInput("robustness_map",
                                label = "show trend robustness (same sign in 90% of ensemble members)",
-                               value = FALSE)
+                               value = TRUE)
              )
     )
   )
@@ -157,6 +160,8 @@ tab.figs <- tabItem(
               choices = c("Maps", "Individual stations"),# "Cross-validation (esd)"),
               selected = "Maps"),
   fluidRow(
+    #column(12, h3("Figures 1 & 2"),
+    #       plotOutput("fig12", width = "100%", height = "80%")),
     column(6, h3("Figure 1"),
            plotOutput("fig1", width = "100%", height = "80%"),
            downloadButton(label = "save", 

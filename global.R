@@ -3,9 +3,6 @@
 
 source("rtools.R")
 source("calculate.trends.R")
-#source("~/git/esd/R/lonlatprojection.R")
-#source("~/git/esd/R/map.R")
-#source("~/git/esd/R/map.station.R")
 
 datelist <- list("1951-2100" = c(1951,2100),
                  "1951-1980" = c(1951,1980),

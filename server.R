@@ -24,7 +24,12 @@ shinyServer(function(input, output, session) {
     return(datelist[[input$dates2]])
   })
   
-
+  # Longitude and latitude range for the two maps
+  xlim1 <- reactive({ maprange(tolower(input$reg1))$lon })
+  ylim1 <- reactive({ maprange(tolower(input$reg1))$lat })
+  xlim2 <- reactive({ maprange(tolower(input$reg2))$lon })
+  ylim2 <- reactive({ maprange(tolower(input$reg2))$lat })
+  
   # Update ensemble when changing variable or scenario  - figure 1
   observe({
     choices <- gcmnames[[var1()]][[input$sce1]]
@@ -114,7 +119,7 @@ shinyServer(function(input, output, session) {
                         selected=names(datelist)[[1]])
     }
   })
-
+  
   # Set default date range to full length (1950-2100) for station plots  - figure 1
   observe({
     if(grepl("station", tolower(input$plottype))) {
@@ -246,23 +251,55 @@ shinyServer(function(input, output, session) {
   })
 
   # Load data for figure 1
-  zload_pc <- reactive({
+  zload_field <- reactive({
+    if(input$src1=="ESD") {
+      Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
+                           season1(), input$sce1))
+    } else if(input$src1=="RCM") {
+      paramfn <- var1()
+      if(paramfn %in% c("fw","mu")) paramfn <- "pr"
+      if(paramfn %in% c("t2m","tsd")) paramfn <- "tas"
+      data.dir <- "data/rcm"
+      if(!is.null(input$FUNX1)) FUNX <- input$FUNX1 else FUNX <- "mean"
+      Z <- zload(pattern=c("ens",FUNX,remapbil,paramfn,"EUR-11",input$sce1,season1()))
+      #filename <- paste0("ens",FUNXfn,"_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+    } 
+    return(Z)
+  })
+
+  zload_field_2 <- reactive({
     Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
                          season1(), input$sce1))
+    return(Z)
+  })
+  
+  # Load data for figure 1
+  zload_pc <- reactive({
+    Z <- zload(path="data", type="field", src=input$src1,
+          region=input$reg1, param=var1(), season=season1(),
+          scenario=input$sce1, FUN=input$fun1, 
+          FUNX=NULL, verbose=FALSE)
+    #Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
+    #                     season1(), input$sce1))
     return(Z)
   })
   
   # Load data for figure 2
   zload_pc_2 <- reactive({
-    Z <- zload(pattern=c("dse.kss", input$reg2, var2(),
-                         season2(), input$sce2))
+    Z <- zload(path="data", type="field", src=input$src2,
+          region=input$reg2, param=var2(), season=season2(),
+          scenario=input$sce2, FUN=input$fun2,
+          FUNX=NULL, verbose=FALSE)
+    #Z <- zload(pattern=c("dse.kss", input$reg2, var2(),
+    #                     season2(), input$sce2), src=input$src2)
     return(Z)
   })
   
   # Load data and transform to station data - figure 1 
   zload_station <- reactive({
-    Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
-                         season1(), input$sce1))
+    Z <- zload_pc()
+    #Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
+    #                     season1(), input$sce1))
     y <- as.station(Z)
     attr(y, "variable") <- attr(Z, "variable")
     attr(y, "longname") <- attr(Z, "longname")
@@ -332,6 +369,7 @@ shinyServer(function(input, output, session) {
                  show.field=input$field, show.station=input$stations,
                  colbar=list(breaks=pretty(input$valrange1, n=22)),
                  show.robustness = input$robustness_map,
+                 xlim=xlim1(), ylim=ylim1(),
                  threshold = 0.9,#input$threshold_map/100,
                  trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
     } else if(grepl("stations", tolower(input$plottype))) {
@@ -345,8 +383,9 @@ shinyServer(function(input, output, session) {
   })
   
   # Reactive plot function for saving - figure 1
-  fig2 <- reactive({
-    print('output$fig2')
+  figure2 <- reactive({
+    browser()
+    print('output$figure2')
     if(grepl("maps", tolower(input$plottype))) {
       z <- zload_pc_2()
       mapgridded(z, im=im2(), it=it2(),
@@ -354,6 +393,7 @@ shinyServer(function(input, output, session) {
                  show.field=input$field, show.station=input$stations,
                  colbar=list(breaks=pretty(input$valrange2, n=22)),
                  show.robustness = input$robustness_map,
+                 xlim=xlim2(), ylim=ylim2(),
                  threshold = 0.9,#input$threshold_map/100,
                  trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
     } else if(grepl("stations", tolower(input$plottype))) {
@@ -366,18 +406,54 @@ shinyServer(function(input, output, session) {
     }
   })
   
-
+  ## Show map of gridded temperature
+  output$fig12 <- renderPlot({
+    print('output$fig12')
+    if(grepl("maps", tolower(input$plottype))) {
+      z <- zload_pc()
+      z2 <- zload_pc()
+      par(mfrow=c(1,2))
+      mapgridded(z, im=im1(), it=it1(), oceanmask=input$landmask,
+                 FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1, 
+                 show.field=input$field, show.station=input$stations,
+                 colbar=list(breaks=pretty(input$valrange1, n=22)),
+                 show.robustness = input$robustness_map,
+                 xlim=xlim1(), ylim=ylim1(),
+                 new=FALSE, add=FALSE, fig=c(0,0.5,0,1),
+                 threshold = 0.9,#input$threshold_map/100,
+                 trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
+      mapgridded(z2, im=im2(), it=it2(), oceanmask=input$landmask,
+                 FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1, 
+                 show.field=input$field, show.station=input$stations,
+                 colbar=list(breaks=pretty(input$valrange2, n=22)),
+                 show.robustness = input$robustness_map,
+                 xlim=xlim2(), ylim=ylim2(),
+                 new=FALSE, add=TRUE, fig=c(0.5,1,0,1),
+                 threshold = 0.9,#input$threshold_map/100,
+                 trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
+     } else if(grepl("stations", tolower(input$plottype))) {
+      z <- zload_station()
+      z2 <- zload_station_2()
+      stplot(z, is=input$location1, it=it1(), im=im1(),
+             MET=input$src1, ylim=input$valrange1)
+    } else if(grepl("cross", tolower(input$plottype))) {
+      z <- zload_pc()
+      crossval(z, im=im1())
+    }
+  }, height=function(){1.0*session$clientData$output_fig1_width})
+  
 
   ## Show map of gridded temperature
   output$fig1 <- renderPlot({
     print('output$fig1')
     if(grepl("maps", tolower(input$plottype))) {
       z <- zload_pc()
-      mapgridded(z, im=im1(), it=it1(),
+      mapgridded(z, im=im1(), it=it1(), oceanmask=input$landmask,
                  FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1, 
                  show.field=input$field, show.station=input$stations,
                  colbar=list(breaks=pretty(input$valrange1, n=22)),
                  show.robustness = input$robustness_map,
+                 xlim=xlim1(), ylim=ylim1(),
                  threshold = 0.9,#input$threshold_map/100,
                  trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
     } else if(grepl("stations", tolower(input$plottype))) {
@@ -389,17 +465,18 @@ shinyServer(function(input, output, session) {
       crossval(z, im=im1())
     }
   }, height=function(){1.0*session$clientData$output_fig1_width})
-  
+
   ## Show map of gridded temperature
   output$fig2 <- renderPlot({
-    print('output$selectplot')
+    print('output$fig2')
     if(grepl("maps", tolower(input$plottype))) {
       z <- zload_pc_2()
-      mapgridded(z, im=im2(), it=it2(),
+      mapgridded(z, im=im2(), it=it2(), oceanmask=input$landmask,
                  FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1, 
                  show.field=input$field, show.station=input$stations,
                  colbar=list(breaks=pretty(input$valrange2, n=22)),
                  show.robustness = input$robustness_map,
+                 xlim=xlim2(), ylim=ylim2(),
                  threshold = 0.9,#input$threshold_map/100,
                  trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
     } else if(grepl("stations", tolower(input$plottype))) {
@@ -420,7 +497,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(file) {
       png(file = file)
-      fig1()
+      figure1()
       dev.off()
     }
   )
@@ -433,7 +510,7 @@ shinyServer(function(input, output, session) {
     },
     content = function(file) {
       png(file = file)
-      fig2()
+      figure2()
       dev.off()
     }
   )    

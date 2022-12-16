@@ -17,6 +17,8 @@ if(file.exists(file.trends)) {
   trends <- list()
 }
 files.dse <- list.files(path=path.data, pattern="dse.kss")
+files.dse <- files.dse[grepl("djf|mam|jja|son|ann",files.dse) & 
+                         grepl("rcp|ssp",files.dse)]
 regions <- unique(gsub("[[:punct:]].*.","",gsub("dse.kss.","",files.dse)))
 variables <- unique(gsub("[[:punct:]].*.","",
                   gsub(paste0("dse.kss.",regions,".",collapse="|"), 
