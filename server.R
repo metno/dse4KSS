@@ -101,80 +101,80 @@ shinyServer(function(input, output, session) {
   })
 
   # Set default date range to full length (1950-2100) for trend maps  - figure 1
-  observe({
-    if(grepl("maps", tolower(input$plottype))) if(input$fun1=="trend") {
-      updateSelectInput(session, "dates1",
-                  label="Years",
-                  choices=names(datelist),
-                  selected=names(datelist)[[1]])
-    }
-  })
+  #observe({
+  #  if(grepl("maps", tolower(input$plottype))) if(input$fun1=="trend") {
+  #    updateSelectInput(session, "dates1",
+  #                label="Years",
+  #                choices=names(datelist),
+  #                selected=names(datelist)[[1]])
+  #  }
+  #})
 
   # Set default date range to full length (1950-2100) for trend maps  - figure 2
-  observe({
-    if(grepl("maps", tolower(input$plottype))) if(input$fun2=="trend") {
-      updateSelectInput(session, "dates2",
-                        label="Years",
-                        choices=names(datelist),
-                        selected=names(datelist)[[1]])
-    }
-  })
+  #observe({
+  #  if(grepl("maps", tolower(input$plottype))) if(input$fun2=="trend") {
+  #    updateSelectInput(session, "dates2",
+  #                      label="Years",
+  #                      choices=names(datelist),
+  #                      selected=names(datelist)[[1]])
+  #  }
+  #})
   
   # Set default date range to full length (1950-2100) for station plots  - figure 1
-  observe({
-    if(grepl("station", tolower(input$plottype))) {
-      updateSelectInput(session, "dates1",
-                        label="Years",
-                        choices=names(datelist),
-                        selected=names(datelist)[[1]])
-    }
-  })
+  #observe({
+  #  if(grepl("station", tolower(input$plottype))) {
+  #    updateSelectInput(session, "dates1",
+  #                      label="Years",
+  #                      choices=names(datelist),
+  #                      selected=names(datelist)[[1]])
+  #  }
+  #})
 
   # Set default date range to full length (1950-2100) for station plots  - figure 2
-  observe({
-    if(grepl("station", tolower(input$plottype))) {
-      updateSelectInput(session, "dates2",
-                        label="Years",
-                        choices=names(datelist),
-                        selected=names(datelist)[[1]])
-    }
-  })
+  #observe({
+  #  if(grepl("station", tolower(input$plottype))) {
+  #    updateSelectInput(session, "dates2",
+  #                      label="Years",
+  #                      choices=names(datelist),
+  #                      selected=names(datelist)[[1]])
+  #  }
+  #})
 
   # Make location selection available for station plots - figure 1
-  observe({
-    if(grepl("station",input$plottype)) {
-      updateSelectInput(session, "location1",
-                        choices = locs[[input$reg1]][[var1()]]$label,
-                        selected = locs[[input$reg1]][[var1()]]$label[[1]])
-    }
-  })
+  #observe({
+  #  if(grepl("station",input$plottype)) {
+  #    updateSelectInput(session, "location1",
+  #                      choices = locs[[input$reg1]][[var1()]]$label,
+  #                      selected = locs[[input$reg1]][[var1()]]$label[[1]])
+  #  }
+  #})
 
   # Make location selection available for station plots - figure 2
-  observe({
-    if(grepl("station",input$plottype)) {
-      updateSelectInput(session, "location2",
-                        choices = locs[[input$reg2]][[var2()]]$label,
-                        selected = locs[[input$reg2]][[var2()]]$label[[1]])
-    }
-  })
+  #observe({
+  #  if(grepl("station",input$plottype)) {
+  #    updateSelectInput(session, "location2",
+  #                      choices = locs[[input$reg2]][[var2()]]$label,
+  #                      selected = locs[[input$reg2]][[var2()]]$label[[1]])
+  #  }
+  #})
 
   # Disable location selection for maps - figure 1
-  observe({
-    if(grepl("maps",input$plottype)) {
-      updateSelectInput(session, "location1",
-                        choices = c("-"),
-                        selected = "-")
-    }
-  })
+  #observe({
+  #  if(grepl("maps",input$plottype)) {
+  #    updateSelectInput(session, "location1",
+  #                      choices = c("-"),
+  #                      selected = "-")
+  #  }
+  #})
 
   # Disable location selection for maps - figure 2
-  observe({
-    if(grepl("maps",input$plottype)) {
-      updateSelectInput(session, "location2",
-                        choices = c("-"),
-                        selected = "-")
-    }
-  })
+  #observe({
+  #  if(grepl("maps",input$plottype)) {
+  #    updateSelectInput(session, "location2",
+  #                      choices = c("-"),
+  #                      selected = "-")
+  #  }
+  #})
 
   # Update location choices when variable or region is changed - location 1
   observe({
@@ -226,11 +226,11 @@ shinyServer(function(input, output, session) {
 
   # Update range of color scale in map - figure 1
   observe({
-    if(grepl("map", tolower(input$plottype))) {
+    #if(grepl("map", tolower(input$plottype))) {
       x <- sliderange(param=var1(), FUN=input$fun1)
-    } else {
-      x <- sliderange(param=var1(), FUN="mean")
-    }
+    #} else {
+    #  x <- sliderange(param=var1(), FUN="mean")
+    #}
     xstep <- diff(pretty(range(x$minmax), n=22))[1]
     updateSliderInput(session, "valrange1", label="Range of colorscale/y-axis",
                       min=min(x$minmax), max=max(x$minmax),
@@ -239,40 +239,18 @@ shinyServer(function(input, output, session) {
 
   # Update range of color scale in map - figure 2
   observe({
-    if(grepl("map", tolower(input$plottype))) {
+    #if(grepl("map", tolower(input$plottype))) {
       x <- sliderange(param=var2(), FUN=input$fun2)
-    } else {
-      x <- sliderange(param=var2(), FUN="mean")
-    }
+    #} else {
+    #  x <- sliderange(param=var2(), FUN="mean")
+    #}
     xstep <- diff(pretty(range(x$minmax), n=22))[1]
     updateSliderInput(session, "valrange2", label="Range of colorscale/y-axis",
                       min=min(x$minmax), max=max(x$minmax),
                       step=xstep, value=x$x)
   })
 
-  # Load data for figure 1
-  zload_field <- reactive({
-    if(input$src1=="ESD") {
-      Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
-                           season1(), input$sce1))
-    } else if(input$src1=="RCM") {
-      paramfn <- var1()
-      if(paramfn %in% c("fw","mu")) paramfn <- "pr"
-      if(paramfn %in% c("t2m","tsd")) paramfn <- "tas"
-      data.dir <- "data/rcm"
-      if(!is.null(input$FUNX1)) FUNX <- input$FUNX1 else FUNX <- "mean"
-      Z <- zload(pattern=c("ens",FUNX,remapbil,paramfn,"EUR-11",input$sce1,season1()))
-      #filename <- paste0("ens",FUNXfn,"_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
-    } 
-    return(Z)
-  })
 
-  zload_field_2 <- reactive({
-    Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
-                         season1(), input$sce1))
-    return(Z)
-  })
-  
   # Load data for figure 1
   zload_pc <- reactive({
     Z <- zload(path="data", type="field", src=input$src1,
@@ -297,23 +275,55 @@ shinyServer(function(input, output, session) {
   
   # Load data and transform to station data - figure 1 
   zload_station <- reactive({
-    Z <- zload_pc()
-    #Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
-    #                     season1(), input$sce1))
-    y <- as.station(Z)
-    attr(y, "variable") <- attr(Z, "variable")
-    attr(y, "longname") <- attr(Z, "longname")
-    attr(y, "unit") <- attr(Z, "unit")
+    Z <- zload(path="data", type="field", src=input$src1,
+               region=input$reg1, param=var1(), season=season1(),
+               scenario=input$sce1, FUN="mean", 
+               FUNX=NULL, verbose=FALSE)
+    if(inherits(Z,"dsensemble")) {
+      y <- as.station(Z)
+      attr(y, "variable") <- attr(Z, "variable")
+      attr(y, "longname") <- attr(Z, "longname")
+      attr(y, "unit") <- attr(Z, "unit")
+    } else {
+      y <- Z
+      ymax <- zload(path="data", type="field", src=input$src1,
+                    region=input$reg1, param=var1(), season=season1(),
+                    scenario=input$sce1, FUN="mean", 
+                    FUNX="max", verbose=FALSE)
+      ymin <- zload(path="data", type="field", src=input$src1,
+                    region=input$reg1, param=var1(), season=season1(),
+                    scenario=input$sce1, FUN="mean", 
+                    FUNX="min", verbose=FALSE)
+      attr(y, "max") <- ymax
+      attr(y, "min") <- ymin
+    }
     return(y)
   })
 
   # Load data and transform to station data - figure 2
   zload_station_2 <- reactive({
-    Z <- zload_pc_2()
-    y <- as.station(Z)
-    attr(y, "variable") <- attr(Z, "variable")
-    attr(y, "longname") <- attr(Z, "longname")
-    attr(y, "unit") <- attr(Z, "unit")
+    Z <- zload(path="data", type="field", src=input$src2,
+               region=input$reg2, param=var2(), season=season2(),
+               scenario=input$sce2, FUN="mean",
+               FUNX=NULL, verbose=FALSE)
+    if(inherits(Z,"dsensemble")) {
+      y <- as.station(Z)
+      attr(y, "variable") <- attr(Z, "variable")
+      attr(y, "longname") <- attr(Z, "longname")
+      attr(y, "unit") <- attr(Z, "unit")
+    } else {
+      y <- Z
+      ymax <- zload(path="data", type="field", src=input$src2,
+                 region=input$reg2, param=var2(), season=season2(),
+                 scenario=input$sce2, FUN="mean",
+                 FUNX="max", verbose=FALSE)
+      ymin <- zload(path="data", type="field", src=input$src2,
+                    region=input$reg2, param=var2(), season=season2(),
+                    scenario=input$sce2, FUN="mean",
+                    FUNX="min", verbose=FALSE)
+      attr(y, "max") <- ymax
+      attr(y, "min") <- ymin
+    }
     return(y)
   })
   
@@ -362,131 +372,104 @@ shinyServer(function(input, output, session) {
   # Reactive plot function for saving - figure 1
   figure1 <- reactive({
     print('output$figure1')
-    if(grepl("figure1", tolower(input$plottype))) {
+    #if(grepl("figure1", tolower(input$plottype))) {
       z <- zload_pc()
       mapgridded(z, im=im1(), it=it1(),
                  FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1, 
-                 show.field=input$field, show.station=input$stations,
+                 #show.field=input$field, show.station=input$stations,
                  colbar=list(breaks=pretty(input$valrange1, n=22)),
                  show.robustness = input$robustness_map,
                  xlim=xlim1(), ylim=ylim1(),
                  threshold = 0.9,#input$threshold_map/100,
                  trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
-    } else if(grepl("stations", tolower(input$plottype))) {
-      z <- zload_station()
-      stplot(z, is=input$location1, it=it1(), im=im1(),
-             MET=input$src1, ylim=input$valrange1)
-    } else if(grepl("cross", tolower(input$plottype))) {
-      z <- zload_pc()
-      crossval(z, im=im1())
-    }
+    #} else if(grepl("stations", tolower(input$plottype))) {
+    #  z <- zload_station()
+    #  stplot(z, is=input$location1, it=it1(), im=im1(),
+    #         MET=input$src1, ylim=input$valrange1)
+    #} else if(grepl("cross", tolower(input$plottype))) {
+    #  z <- zload_pc()
+    #  crossval(z, im=im1())
+    #}
   })
   
   # Reactive plot function for saving - figure 1
   figure2 <- reactive({
     browser()
     print('output$figure2')
-    if(grepl("maps", tolower(input$plottype))) {
+    #if(grepl("maps", tolower(input$plottype))) {
       z <- zload_pc_2()
       mapgridded(z, im=im2(), it=it2(),
                  FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1, 
-                 show.field=input$field, show.station=input$stations,
+                 #show.field=input$field, show.station=input$stations,
                  colbar=list(breaks=pretty(input$valrange2, n=22)),
                  show.robustness = input$robustness_map,
                  xlim=xlim2(), ylim=ylim2(),
                  threshold = 0.9,#input$threshold_map/100,
                  trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
-    } else if(grepl("stations", tolower(input$plottype))) {
-      z <- zload_station_2()
-      stplot(z, is=input$location2, it=it2(), im=im2(),
-             MET=input$src2, ylim=input$valrange1)
-    } else if(grepl("cross", tolower(input$plottype))) {
-      z <- zload_pc_2()
-      crossval(z, im=im2())
-    }
+    #} else if(grepl("stations", tolower(input$plottype))) {
+    #  z <- zload_station_2()
+    #  stplot(z, is=input$location2, it=it2(), im=im2(),
+    #         MET=input$src2, ylim=input$valrange1)
+    #} else if(grepl("cross", tolower(input$plottype))) {
+    #  z <- zload_pc_2()
+    #  crossval(z, im=im2())
+    #}
   })
   
   ## Show map of gridded temperature
-  output$fig12 <- renderPlot({
+  output$figts <- renderPlot({
     print('output$fig12')
-    if(grepl("maps", tolower(input$plottype))) {
-      z <- zload_pc()
-      z2 <- zload_pc()
-      par(mfrow=c(1,2))
-      mapgridded(z, im=im1(), it=it1(), oceanmask=input$landmask,
-                 FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1, 
-                 show.field=input$field, show.station=input$stations,
-                 colbar=list(breaks=pretty(input$valrange1, n=22)),
-                 show.robustness = input$robustness_map,
-                 xlim=xlim1(), ylim=ylim1(),
-                 new=FALSE, add=FALSE, fig=c(0,0.5,0,1),
-                 threshold = 0.9,#input$threshold_map/100,
-                 trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
-      mapgridded(z2, im=im2(), it=it2(), oceanmask=input$landmask,
-                 FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1, 
-                 show.field=input$field, show.station=input$stations,
-                 colbar=list(breaks=pretty(input$valrange2, n=22)),
-                 show.robustness = input$robustness_map,
-                 xlim=xlim2(), ylim=ylim2(),
-                 new=FALSE, add=TRUE, fig=c(0.5,1,0,1),
-                 threshold = 0.9,#input$threshold_map/100,
-                 trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
-     } else if(grepl("stations", tolower(input$plottype))) {
       z <- zload_station()
       z2 <- zload_station_2()
-      stplot(z, is=input$location1, it=it1(), im=im1(),
-             MET=input$src1, ylim=input$valrange1)
-    } else if(grepl("cross", tolower(input$plottype))) {
-      z <- zload_pc()
-      crossval(z, im=im1())
-    }
-  }, height=function(){1.0*session$clientData$output_fig1_width})
+      stplot12(z, z2, is=input$location1, it=it1(), 
+               im1=im1(), im2=im2(), ylim=input$valrange1)
+  }, height=function(){0.6*session$clientData$output_figts_width})
   
 
   ## Show map of gridded temperature
   output$fig1 <- renderPlot({
     print('output$fig1')
-    if(grepl("maps", tolower(input$plottype))) {
+    #if(grepl("maps", tolower(input$plottype))) {
       z <- zload_pc()
       mapgridded(z, im=im1(), it=it1(), oceanmask=input$landmask,
                  FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1, 
-                 show.field=input$field, show.station=input$stations,
+                 #show.field=input$field, show.station=input$stations,
                  colbar=list(breaks=pretty(input$valrange1, n=22)),
                  show.robustness = input$robustness_map,
                  xlim=xlim1(), ylim=ylim1(),
                  threshold = 0.9,#input$threshold_map/100,
                  trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
-    } else if(grepl("stations", tolower(input$plottype))) {
-      z <- zload_station()
-      stplot(z, is=input$location1, it=it1(), im=im1(),
-             MET=input$src1, ylim=input$valrange1)
-    } else if(grepl("cross", tolower(input$plottype))) {
-      z <- zload_pc()
-      crossval(z, im=im1())
-    }
+    #} else if(grepl("stations", tolower(input$plottype))) {
+    #  z <- zload_station()
+    #  stplot(z, is=input$location1, it=it1(), im=im1(),
+    #         MET=input$src1, ylim=input$valrange1)
+    #} else if(grepl("cross", tolower(input$plottype))) {
+    #  z <- zload_pc()
+    #  crossval(z, im=im1())
+    #}
   }, height=function(){1.0*session$clientData$output_fig1_width})
 
   ## Show map of gridded temperature
   output$fig2 <- renderPlot({
     print('output$fig2')
-    if(grepl("maps", tolower(input$plottype))) {
+    #if(grepl("maps", tolower(input$plottype))) {
       z <- zload_pc_2()
       mapgridded(z, im=im2(), it=it2(), oceanmask=input$landmask,
                  FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1, 
-                 show.field=input$field, show.station=input$stations,
+                 #show.field=input$field, show.station=input$stations,
                  colbar=list(breaks=pretty(input$valrange2, n=22)),
                  show.robustness = input$robustness_map,
                  xlim=xlim2(), ylim=ylim2(),
                  threshold = 0.9,#input$threshold_map/100,
                  trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
-    } else if(grepl("stations", tolower(input$plottype))) {
-      z <- zload_station_2()
-      stplot(z, is=input$location2, it=it2(), im=im2(),
-             MET=input$src2, ylim=input$valrange1)
-    } else if(grepl("cross", tolower(input$plottype))) {
-      z <- zload_pc_2()
-      crossval(z, im=im2())
-    }
+    #} else if(grepl("stations", tolower(input$plottype))) {
+    #  z <- zload_station_2()
+    #  stplot(z, is=input$location2, it=it2(), im=im2(),
+    #         MET=input$src2, ylim=input$valrange1)
+    #} else if(grepl("cross", tolower(input$plottype))) {
+    #  z <- zload_pc_2()
+    #  crossval(z, im=im2())
+    #}
   }, height=function(){1.0*session$clientData$output_fig2_width})
   
   output$savefig1 <- downloadHandler(
