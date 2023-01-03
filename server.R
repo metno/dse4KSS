@@ -101,136 +101,53 @@ shinyServer(function(input, output, session) {
   })
 
   # Set default date range to full length (1950-2100) for trend maps  - figure 1
-  #observe({
-  #  if(grepl("maps", tolower(input$plottype))) if(input$fun1=="trend") {
-  #    updateSelectInput(session, "dates1",
-  #                label="Years",
-  #                choices=names(datelist),
-  #                selected=names(datelist)[[1]])
-  #  }
-  #})
-
-  # Set default date range to full length (1950-2100) for trend maps  - figure 2
-  #observe({
-  #  if(grepl("maps", tolower(input$plottype))) if(input$fun2=="trend") {
-  #    updateSelectInput(session, "dates2",
-  #                      label="Years",
-  #                      choices=names(datelist),
-  #                      selected=names(datelist)[[1]])
-  #  }
-  #})
-  
-  # Set default date range to full length (1950-2100) for station plots  - figure 1
-  #observe({
-  #  if(grepl("station", tolower(input$plottype))) {
-  #    updateSelectInput(session, "dates1",
-  #                      label="Years",
-  #                      choices=names(datelist),
-  #                      selected=names(datelist)[[1]])
-  #  }
-  #})
-
-  # Set default date range to full length (1950-2100) for station plots  - figure 2
-  #observe({
-  #  if(grepl("station", tolower(input$plottype))) {
-  #    updateSelectInput(session, "dates2",
-  #                      label="Years",
-  #                      choices=names(datelist),
-  #                      selected=names(datelist)[[1]])
-  #  }
-  #})
-
-  # Make location selection available for station plots - figure 1
-  #observe({
-  #  if(grepl("station",input$plottype)) {
-  #    updateSelectInput(session, "location1",
-  #                      choices = locs[[input$reg1]][[var1()]]$label,
-  #                      selected = locs[[input$reg1]][[var1()]]$label[[1]])
-  #  }
-  #})
-
-  # Make location selection available for station plots - figure 2
-  #observe({
-  #  if(grepl("station",input$plottype)) {
-  #    updateSelectInput(session, "location2",
-  #                      choices = locs[[input$reg2]][[var2()]]$label,
-  #                      selected = locs[[input$reg2]][[var2()]]$label[[1]])
-  #  }
-  #})
-
-  # Disable location selection for maps - figure 1
-  #observe({
-  #  if(grepl("maps",input$plottype)) {
-  #    updateSelectInput(session, "location1",
-  #                      choices = c("-"),
-  #                      selected = "-")
-  #  }
-  #})
-
-  # Disable location selection for maps - figure 2
-  #observe({
-  #  if(grepl("maps",input$plottype)) {
-  #    updateSelectInput(session, "location2",
-  #                      choices = c("-"),
-  #                      selected = "-")
-  #  }
-  #})
-
-  # Update location choices when variable or region is changed - location 1
   observe({
-    if(input$location1 %in% locs[[input$reg1]][[var1()]]$label) {
-      choices <- locs[[input$reg1]][[var1()]]$label
-      sel <- input$location1
-    } else if(input$location1!="-") {
-      choices <- locs[[input$reg1]][[var1()]]$label
-      is <- grep(cleanstr(input$location1, "[0-9]"),
-                 cleanstr(choices, "[0-9]"))
-      if(length(is)>1) {
-        is <- is[[1]]
-      } else if(length(is)==0) {
-        is <- 1
-      }
-      sel <- choices[[is]]
-    } else {
-      choices <- c("-")
-      sel <- "-"
+    if(input$fun1=="trend") {
+      updateSelectInput(session, "dates1",
+                  label="Years",
+                  choices=names(datelist),
+                  selected=names(datelist)[[1]])
     }
-    updateSelectInput(session, "location1",
-                      choices = choices, # update choices
-                      selected = sel) # remove selection
   })
 
-  # Update location choices when variable or region is changed - location 2
+  # Set default date range to full length (1950-2100) for trend maps  - figure 2
   observe({
-    if(input$location2 %in% locs[[input$reg2]][[var2()]]$label) {
-      choices <- locs[[input$reg2]][[var2()]]$label
-      sel <- input$location2
-    } else if(input$location2!="-") {
-      choices <- locs[[input$reg2]][[var2()]]$label
-      is <- grep(cleanstr(input$location2, "[0-9]"),
-                 cleanstr(choices, "[0-9]"))
-      if(length(is)>1) {
-        is <- is[[1]]
-      } else if(length(is)==0) {
-        is <- 1
-      }
-      sel <- choices[[is]]
-    } else {
-      choices <- c("-")
-      sel <- "-"
+    if(input$fun2=="trend") {
+      updateSelectInput(session, "dates2",
+                        label="Years",
+                        choices=names(datelist),
+                        selected=names(datelist)[[1]])
     }
-    updateSelectInput(session, "location2",
+  })
+  
+  # Update location choices when variable or region is changed - location 1
+  observe({
+    choices1 <- locs[[input$reg1]][[var1()]]$label
+    choices2 <- locs[[input$reg2]][[var2()]]$label
+    choices <- choices1[choices1 %in% choices2]
+    if(input$location1!="-") {
+      if(input$location1 %in% choices) {
+        is <- which(input$location1==choices)
+      } else {
+        is <- grep(cleanstr(input$location1, "[0-9]"),
+                   cleanstr(choices, "[0-9]"))
+        if(length(is)>1) {
+          is <- is[[1]]
+        } else if(length(is)==0) {
+          is <- 1
+        }
+      }
+      sel <- choices[is]
+    }
+    browser()
+    updateSelectInput(session, "location1",
                       choices = choices, # update choices
                       selected = sel) # remove selection
   })
 
   # Update range of color scale in map - figure 1
   observe({
-    #if(grepl("map", tolower(input$plottype))) {
-      x <- sliderange(param=var1(), FUN=input$fun1)
-    #} else {
-    #  x <- sliderange(param=var1(), FUN="mean")
-    #}
+    x <- sliderange(param=var1(), FUN=input$fun1)
     xstep <- diff(pretty(range(x$minmax), n=22))[1]
     updateSliderInput(session, "valrange1", label="Range of colorscale/y-axis",
                       min=min(x$minmax), max=max(x$minmax),
@@ -421,8 +338,8 @@ shinyServer(function(input, output, session) {
     print('output$fig12')
       z <- zload_station()
       z2 <- zload_station_2()
-      stplot12(z, z2, is=input$location1, it=it1(), 
-               im1=im1(), im2=im2(), ylim=input$valrange1)
+      stplot12(z, z2, is=input$location1, it=c(1950,2100),#it1(), 
+               im1=im1(), im2=im2(), ylim=input$tsrange1)
   }, height=function(){0.6*session$clientData$output_figts_width})
   
 

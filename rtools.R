@@ -6,6 +6,7 @@
 
 library(shiny)
 library(shinydashboard)
+library(ggplot2)
 library(esd)
 #source("~/git/esd/R/as.station.R")
 source("~/git/esd/R/retrieve.R")
@@ -552,7 +553,8 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
                      #MET1="ESD", MET2="ESD", 
                      is=NULL, it=NULL, 
                      xlim=NULL, ylim=NULL, 
-                     xlab=NULL, ylab=NULL, main=NULL, 
+                     xlab=NULL, ylab=NULL, main=NULL,
+                     ylim2=NULL, ylab2=NULL,
                      mar=c(2,2,2,1), mgp=c(2.5,1,0.5),
                      cex.axis=1, cex.lab=1.2, cex.main=1.2,
                      new=FALSE, add=FALSE, verbose=FALSE, ...) {
@@ -603,8 +605,8 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
     mean_1 <- y1
     min_1 <- attr(Z, "min")
     max_1 <- attr(Z, "max")
-    q5_1 <- NULL
-    q95_1 <- NULL
+    q5_1 <- rep(NULL, length(mean_1))
+    q95_1 <- rep(NULL, length(mean_1))
   }
   
   if(inherits(y2, "dsensemble")) {
@@ -617,31 +619,37 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
     mean_2 <- y2
     min_2 <- subset(attr(y2, "min"), is=is, it=it)
     max_2 <- subset(attr(y2, "max"), is=is, it=it)
-    q5_2 <- NULL
-    q95_2 <- NULL
+    q5_2 <- rep(NA, length(mean_2))
+    q95_2 <- rep(NA, length(mean_2))
   }
   
-  data(Oslo)
-  if(is.years(index(y1))) Oslo <- annual(Oslo)
-  if(new) dev.new()
-  par(bty="n",xaxt="s",yaxt="s",xpd=FALSE,new=add)
-  plot.zoo(Oslo, type="n", xlim=xlim, ylim=ylim,
-           xlab=xlab, ylab=ylab, main=main, 
-           cex.axis=1, cex.lab=1.2, cex.main=1.2,
-           mar=mar, mgp=mgp, new=FALSE)
-  
-  lines(index(y1), mean_1, col=col1, lty=1, lwd=4)
-  lines(index(y1), max_1, col=col1, lty=1, lwd=1)
-  lines(index(y1), min_1, col=col1, lty=1, lwd=1)
-  lines(index(y2), mean_2, col=col2, lty=2, lwd=4)
-  lines(index(y2), max_2, col=col2, lty=2, lwd=1)
-  lines(index(y2), min_2, col=col2, lty=2, lwd=1)
-  legend("topleft", box.lwd=0,
-         col=c(col1, col1, col2, col2),
-         lty=c(1,1,2,2), lwd=c(4,1,4,1), 
-         legend=c("mean of ensemble A",
-                  "min and max of ensemble A",
-                  "mean of ensemble B",
-                  "min and max of ensemble B"))
+  data <- data.frame(date = c(index(y1), index(y2)),
+                     ensemble = c(rep("A", length(mean_1)), 
+                                  rep("B", length(mean_2))),
+                     mean = c(mean_1, mean_2), 
+                     min = c(min_1, min_2), 
+                     max = c(max_1, max_2), 
+                     q5 = c(q5_1, q5_2), 
+                     q95 = c(q95_1, q95_2))
+  cols <- c("darkgreen", "orange")
+  p <- ggplot(data = data, aes(x = date, y = mean), size = 2) + 
+    geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
+    geom_line(aes(x = date, y = mean, color=ensemble), size = 1) + 
+    scale_color_manual(values = cols) +
+    scale_fill_manual(values = cols) + 
+    xlab(xlab) + ylab(ylab) + ggtitle(main) +
+    theme_minimal()
+  if(attr(y1, "unit")!=attr(y2, "unit")) {
+    if(is.null(ylab2)) ylab2 <- paste0(attr(y2, "longname")[1], 
+                                       "  (", attr(y2,"unit")[1], ")")
+    if(is.null(ylim2)) ylim2 <- diff(range(y2))/diff(range(y1))
+    p <- p + scale_y_continuous(
+      name = ylab, limits = ylim,
+      sec.axis = sec_axis(~.*ylim2, name=ylab2)) +
+      theme(axis.text.y.right =  element_text(color = cols[2]),
+            axis.title.y.right = element_text(color= cols[2])
+    )
+  }
+  p
 
 }
