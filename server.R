@@ -1,35 +1,35 @@
 
 shinyServer(function(input, output, session) {
   #countview <- reactiveValues(i = 1)
-  
+
   # Variable name - figure 1
   var1 <- reactive({ varname(input$var1, long=FALSE) })
-  
+
   # Season name - figure 1
-  season1 <- reactive({ seasonname(input$it1, long=FALSE) })
-  
+  season1 <- reactive({ seasonname(input$seas1, long=FALSE) })
+
   # Variable name - figure 2
   var2 <- reactive({ varname(input$var2, long=FALSE) })
-  
+
   # Season name - figure 2
-  season2 <- reactive({ seasonname(input$it2, long=FALSE) })
-  
+  season2 <- reactive({ seasonname(input$seas2, long=FALSE) })
+
   # Date range - figure 1
   it1 <- reactive({
     return(datelist[[input$dates1]])
   })
-  
+
   # Date range - figure 2
   it2 <- reactive({
     return(datelist[[input$dates2]])
   })
-  
+
   # Longitude and latitude range for the two maps
   xlim1 <- reactive({ maprange(tolower(input$reg1))$lon })
   ylim1 <- reactive({ maprange(tolower(input$reg1))$lat })
-  xlim2 <- reactive({ maprange(tolower(input$reg2))$lon })
-  ylim2 <- reactive({ maprange(tolower(input$reg2))$lat })
-  
+  xlim2 <- reactive({ maprange(tolower(input$reg1))$lon })
+  ylim2 <- reactive({ maprange(tolower(input$reg1))$lat })
+
   # Update ensemble when changing variable or scenario  - figure 1
   observe({
     choices <- gcmnames[[var1()]][[input$sce1]]
@@ -119,7 +119,7 @@ shinyServer(function(input, output, session) {
                         selected=names(datelist)[[1]])
     }
   })
-  
+
   # Update location choices when variable or region is changed - location 1
   observe({
     choices1 <- locs[[input$reg1]][[var1()]]$label
@@ -139,7 +139,7 @@ shinyServer(function(input, output, session) {
       }
       sel <- choices[is]
     }
-    browser()
+    #browser()
     updateSelectInput(session, "location1",
                       choices = choices, # update choices
                       selected = sel) # remove selection
@@ -149,20 +149,16 @@ shinyServer(function(input, output, session) {
   observe({
     x <- sliderange(param=var1(), FUN=input$fun1)
     xstep <- diff(pretty(range(x$minmax), n=22))[1]
-    updateSliderInput(session, "valrange1", label="Range of colorscale/y-axis",
+    updateSliderInput(session, "valrange1", label="Range of colorscale",
                       min=min(x$minmax), max=max(x$minmax),
                       step=xstep, value=x$x)
   })
 
   # Update range of color scale in map - figure 2
   observe({
-    #if(grepl("map", tolower(input$plottype))) {
       x <- sliderange(param=var2(), FUN=input$fun2)
-    #} else {
-    #  x <- sliderange(param=var2(), FUN="mean")
-    #}
     xstep <- diff(pretty(range(x$minmax), n=22))[1]
-    updateSliderInput(session, "valrange2", label="Range of colorscale/y-axis",
+    updateSliderInput(session, "valrange2", label="Range of colorscale",
                       min=min(x$minmax), max=max(x$minmax),
                       step=xstep, value=x$x)
   })
@@ -172,29 +168,25 @@ shinyServer(function(input, output, session) {
   zload_pc <- reactive({
     Z <- zload(path="data", type="field", src=input$src1,
           region=input$reg1, param=var1(), season=season1(),
-          scenario=input$sce1, FUN=input$fun1, 
+          scenario=input$sce1, FUN=input$fun1,
           FUNX=NULL, verbose=FALSE)
-    #Z <- zload(pattern=c("dse.kss", input$reg1, var1(),
-    #                     season1(), input$sce1))
     return(Z)
   })
-  
+
   # Load data for figure 2
   zload_pc_2 <- reactive({
     Z <- zload(path="data", type="field", src=input$src2,
-          region=input$reg2, param=var2(), season=season2(),
+          region=input$reg1, param=var2(), season=season2(),
           scenario=input$sce2, FUN=input$fun2,
           FUNX=NULL, verbose=FALSE)
-    #Z <- zload(pattern=c("dse.kss", input$reg2, var2(),
-    #                     season2(), input$sce2), src=input$src2)
     return(Z)
   })
-  
-  # Load data and transform to station data - figure 1 
+
+  # Load data and transform to station data - figure 1
   zload_station <- reactive({
     Z <- zload(path="data", type="field", src=input$src1,
                region=input$reg1, param=var1(), season=season1(),
-               scenario=input$sce1, FUN="mean", 
+               scenario=input$sce1, FUN="mean",
                FUNX=NULL, verbose=FALSE)
     if(inherits(Z,"dsensemble")) {
       y <- as.station(Z)
@@ -205,11 +197,11 @@ shinyServer(function(input, output, session) {
       y <- Z
       ymax <- zload(path="data", type="field", src=input$src1,
                     region=input$reg1, param=var1(), season=season1(),
-                    scenario=input$sce1, FUN="mean", 
+                    scenario=input$sce1, FUN="mean",
                     FUNX="max", verbose=FALSE)
       ymin <- zload(path="data", type="field", src=input$src1,
                     region=input$reg1, param=var1(), season=season1(),
-                    scenario=input$sce1, FUN="mean", 
+                    scenario=input$sce1, FUN="mean",
                     FUNX="min", verbose=FALSE)
       attr(y, "max") <- ymax
       attr(y, "min") <- ymin
@@ -220,7 +212,7 @@ shinyServer(function(input, output, session) {
   # Load data and transform to station data - figure 2
   zload_station_2 <- reactive({
     Z <- zload(path="data", type="field", src=input$src2,
-               region=input$reg2, param=var2(), season=season2(),
+               region=input$reg1, param=var2(), season=season2(),
                scenario=input$sce2, FUN="mean",
                FUNX=NULL, verbose=FALSE)
     if(inherits(Z,"dsensemble")) {
@@ -231,11 +223,11 @@ shinyServer(function(input, output, session) {
     } else {
       y <- Z
       ymax <- zload(path="data", type="field", src=input$src2,
-                 region=input$reg2, param=var2(), season=season2(),
+                 region=input$reg1, param=var2(), season=season2(),
                  scenario=input$sce2, FUN="mean",
                  FUNX="max", verbose=FALSE)
       ymin <- zload(path="data", type="field", src=input$src2,
-                    region=input$reg2, param=var2(), season=season2(),
+                    region=input$reg1, param=var2(), season=season2(),
                     scenario=input$sce2, FUN="mean",
                     FUNX="min", verbose=FALSE)
       attr(y, "max") <- ymax
@@ -243,156 +235,119 @@ shinyServer(function(input, output, session) {
     }
     return(y)
   })
-  
+
   # Change default model simulations when changing variable and scenario - figure 1
   im1 <- reactive({
     choices <- gcmnames[[var1()]][[input$sce1]]
     im <- choices %in% input$gcms1
     return(im)
   })
-  
+
   # Change default model simulations when changing variable and scenario - figure 2
   im2 <- reactive({
     choices <- gcmnames[[var2()]][[input$sce2]]
     im <- choices %in% input$gcms2
     return(im)
   })
-  
+
   # Caption for figure 1
-  output$main1 <- renderText(paste0("<b>", input$fun1, "</b>", 
-                                    " of the ",switch(input$src1, 
+  output$main1 <- renderText(paste0("<b>", input$fun1, "</b>",
+                                    " of the ",switch(input$src1,
                                                       "ESD" = "statistically downscaled (<b>ESD</b>) ",
                                                       "RCM" = "dynamically downscaled (<b>RCM</b>) ",
-                                                      "GCM" = "global climate model output (GCM) of "), 
-                                    "<b>", input$var1, "</b>"," for the ", 
-                                    "<b>", input$it1, "</b>", " season ",
+                                                      "GCM" = "global climate model output (GCM) of "),
+                                    "<b>", input$var1, "</b>"," for the ",
+                                    "<b>", input$seas1, "</b>", " season ",
                                     "in the period ", "<b>", input$dates1, "</b>",
-                                    ", assuming emission scenario ", 
-                                    "<b>", input$sce1, "</b>", 
+                                    ", assuming emission scenario ",
+                                    "<b>", input$sce1, "</b>",
                                     paste0(" (ensemble mean of ",
                                            length(input$gcms1), " simulations)")))
 
   # Caption for figure 2
-  output$main2 <- renderText(paste0("<b>", input$fun2, "</b>", 
-                                    " of the ",switch(input$src2, 
+  output$main2 <- renderText(paste0("<b>", input$fun2, "</b>",
+                                    " of the ",switch(input$src2,
                                                       "ESD" = "statistically downscaled (<b>ESD</b>) ",
                                                       "RCM" = "dynamically downscaled (<b>RCM</b>) ",
-                                                      "GCM" = "global climate model output (GCM) of "), 
-                                    "<b>", input$var2, "</b>"," for the ", 
-                                    "<b>", input$it2, "</b>", " season ",
+                                                      "GCM" = "global climate model output (GCM) of "),
+                                    "<b>", input$var1, "</b>"," for the ",
+                                    "<b>", input$seas1, "</b>", " season ",
                                     "in the period ", "<b>", input$dates2, "</b>",
-                                    ", assuming emission scenario ", 
-                                    "<b>", input$sce2, "</b>", 
+                                    ", assuming emission scenario ",
+                                    "<b>", input$sce2, "</b>",
                                     paste0(" (ensemble mean of ",
                                            length(input$gcms2), " simulations)")))
-  
+
   # Reactive plot function for saving - figure 1
   figure1 <- reactive({
     print('output$figure1')
-    #if(grepl("figure1", tolower(input$plottype))) {
-      z <- zload_pc()
-      mapgridded(z, im=im1(), it=it1(),
-                 FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1, 
-                 #show.field=input$field, show.station=input$stations,
-                 colbar=list(breaks=pretty(input$valrange1, n=22)),
-                 show.robustness = input$robustness_map,
-                 xlim=xlim1(), ylim=ylim1(),
-                 threshold = 0.9,#input$threshold_map/100,
-                 trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
-    #} else if(grepl("stations", tolower(input$plottype))) {
-    #  z <- zload_station()
-    #  stplot(z, is=input$location1, it=it1(), im=im1(),
-    #         MET=input$src1, ylim=input$valrange1)
-    #} else if(grepl("cross", tolower(input$plottype))) {
-    #  z <- zload_pc()
-    #  crossval(z, im=im1())
-    #}
+    z <- zload_pc()
+    mapgridded(z, im=im1(), it=it1(),
+               FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1,
+               #show.field=input$field, show.station=input$stations,
+               colbar=list(breaks=pretty(input$valrange1, n=22)),
+               show.robustness = input$robustness_map,
+               xlim=xlim1(), ylim=ylim1(),
+               threshold = 0.9,#input$threshold_map/100,
+               trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
   })
-  
+
   # Reactive plot function for saving - figure 1
   figure2 <- reactive({
-    browser()
     print('output$figure2')
-    #if(grepl("maps", tolower(input$plottype))) {
-      z <- zload_pc_2()
-      mapgridded(z, im=im2(), it=it2(),
-                 FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1, 
-                 #show.field=input$field, show.station=input$stations,
-                 colbar=list(breaks=pretty(input$valrange2, n=22)),
-                 show.robustness = input$robustness_map,
-                 xlim=xlim2(), ylim=ylim2(),
-                 threshold = 0.9,#input$threshold_map/100,
-                 trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
-    #} else if(grepl("stations", tolower(input$plottype))) {
-    #  z <- zload_station_2()
-    #  stplot(z, is=input$location2, it=it2(), im=im2(),
-    #         MET=input$src2, ylim=input$valrange1)
-    #} else if(grepl("cross", tolower(input$plottype))) {
-    #  z <- zload_pc_2()
-    #  crossval(z, im=im2())
-    #}
+    z <- zload_pc_2()
+    mapgridded(z, im=im2(), it=it1(),
+               FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1,
+               #show.field=input$field, show.station=input$stations,
+               colbar=list(breaks=pretty(input$valrange2, n=22)),
+               show.robustness = input$robustness_map,
+               xlim=xlim2(), ylim=ylim2(),
+               threshold = 0.9,#input$threshold_map/100,
+               trends=T4[[input$reg1]][[var1()]][[input$sce2]][[season1()]])
   })
-  
+
   ## Show map of gridded temperature
   output$figts <- renderPlot({
     print('output$fig12')
-      z <- zload_station()
-      z2 <- zload_station_2()
-      stplot12(z, z2, is=input$location1, it=c(1950,2100),#it1(), 
-               im1=im1(), im2=im2(), ylim=input$tsrange1)
+    z <- zload_station()
+    z2 <- zload_station_2()
+    stplot12(z, z2, is=input$location1, it=c(1950,2100),#it1(),
+             im1=im1(), im2=im2(), ylim=input$tsrange1)
   }, height=function(){0.6*session$clientData$output_figts_width})
-  
+
 
   ## Show map of gridded temperature
   output$fig1 <- renderPlot({
     print('output$fig1')
-    #if(grepl("maps", tolower(input$plottype))) {
-      z <- zload_pc()
-      mapgridded(z, im=im1(), it=it1(), oceanmask=input$landmask,
-                 FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1, 
-                 #show.field=input$field, show.station=input$stations,
-                 colbar=list(breaks=pretty(input$valrange1, n=22)),
-                 show.robustness = input$robustness_map,
-                 xlim=xlim1(), ylim=ylim1(),
-                 threshold = 0.9,#input$threshold_map/100,
-                 trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
-    #} else if(grepl("stations", tolower(input$plottype))) {
-    #  z <- zload_station()
-    #  stplot(z, is=input$location1, it=it1(), im=im1(),
-    #         MET=input$src1, ylim=input$valrange1)
-    #} else if(grepl("cross", tolower(input$plottype))) {
-    #  z <- zload_pc()
-    #  crossval(z, im=im1())
-    #}
+    z <- zload_pc()
+    mapgridded(z, im=im1(), it=it1(), oceanmask=input$landmask,
+               FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1,
+               #show.field=input$field, show.station=input$stations,
+               colbar=list(breaks=pretty(input$valrange1, n=22)),
+               show.robustness = input$robustness_map,
+               xlim=xlim1(), ylim=ylim1(),
+               threshold = 0.9,#input$threshold_map/100,
+               trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
   }, height=function(){1.0*session$clientData$output_fig1_width})
 
   ## Show map of gridded temperature
   output$fig2 <- renderPlot({
     print('output$fig2')
-    #if(grepl("maps", tolower(input$plottype))) {
-      z <- zload_pc_2()
-      mapgridded(z, im=im2(), it=it2(), oceanmask=input$landmask,
-                 FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1, 
-                 #show.field=input$field, show.station=input$stations,
-                 colbar=list(breaks=pretty(input$valrange2, n=22)),
-                 show.robustness = input$robustness_map,
-                 xlim=xlim2(), ylim=ylim2(),
-                 threshold = 0.9,#input$threshold_map/100,
-                 trends=T4[[input$reg2]][[var2()]][[input$sce2]][[season2()]])
-    #} else if(grepl("stations", tolower(input$plottype))) {
-    #  z <- zload_station_2()
-    #  stplot(z, is=input$location2, it=it2(), im=im2(),
-    #         MET=input$src2, ylim=input$valrange1)
-    #} else if(grepl("cross", tolower(input$plottype))) {
-    #  z <- zload_pc_2()
-    #  crossval(z, im=im2())
-    #}
+    z <- zload_pc_2()
+    mapgridded(z, im=im2(), it=it1(), oceanmask=input$landmask,
+               FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1,
+               #show.field=input$field, show.station=input$stations,
+               colbar=list(breaks=pretty(input$valrange2, n=22)),
+               show.robustness = input$robustness_map,
+               xlim=xlim2(), ylim=ylim2(),
+               threshold = 0.9,#input$threshold_map/100,
+               trends=T4[[input$reg1]][[var1()]][[input$sce2]][[season1()]])
   }, height=function(){1.0*session$clientData$output_fig2_width})
-  
+
   output$savefig1 <- downloadHandler(
     filename = function() {
       paste('downscaled', input$src1, input$fun1, input$reg1, var1(),
-            input$it1, input$sce1, "ensemblemean",#input$funx1, 
+            input$seas1, input$sce1, "ensemblemean",#input$funx1,
             'png', sep='.')
     },
     content = function(file) {
@@ -404,8 +359,8 @@ shinyServer(function(input, output, session) {
 
   output$savefig2 <- downloadHandler(
     filename = function() {
-      paste('downscaled', input$src2, input$fun2, input$reg2, var2(),
-            input$it2, input$sce2, "ensemblemean",#input$funx1, 
+      paste('downscaled', input$src2, input$fun2, input$reg1, var2(),
+            input$seas1, input$sce2, "ensemblemean",#input$funx1,
             'png', sep='.')
     },
     content = function(file) {
@@ -413,6 +368,6 @@ shinyServer(function(input, output, session) {
       figure2()
       dev.off()
     }
-  )    
+  )
 
 })

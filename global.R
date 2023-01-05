@@ -1,6 +1,11 @@
 ## K Parding, Met Norway, 2022-09-27
 ## R-shiny app that presents empirical-statistical downscaled results.
 
+library(shiny)
+library(shinydashboard)
+library(esd)
+library(ggplot2)
+
 source("rtools.R")
 source("calculate.trends.R")
 
@@ -22,7 +27,7 @@ for(region in names(trends)) {
   for(var in names(trends[[region]])) {
     for(scenario in names(trends[[region]][[var]])) {
       for(it in names(trends[[region]][[var]][[scenario]])) {
-        if(! any(grepl(region, files) & grepl(var, files) & 
+        if(! any(grepl(region, files) & grepl(var, files) &
                  grepl(scenario, files) & grepl(it, files)) ) {
           T4[[region]][[var]][[scenario]][[it]] <- NULL
         }
@@ -61,7 +66,7 @@ verbose <- FALSE
 if(verbose) print('List names:')
 if(verbose) print(nms)
 n <- length(nms)
-regs <- rep('?',n); vars <- rep('?',n); srcs <- vars; 
+regs <- rep('?',n); vars <- rep('?',n); srcs <- vars;
 nems <- vars; sces <- vars; its <- vars
 for (i in 1:n) {
   regs[i] <- namesplit(nms[i])$region
@@ -93,6 +98,7 @@ for(scenario in unique(sces)) {
 }
 
 scenarios <- unique(sces)
-scenarios <- paste(toupper(scenarios), 
+scenarios <- paste(toupper(scenarios),
                    c("(CMIP5)","(CMIP6)")[as.numeric(grepl("SSP", scenarios))+1])
 names(scenarios) <- unique(sces)
+

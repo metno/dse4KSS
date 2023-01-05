@@ -4,12 +4,7 @@
 ## to minimise the needed data volume, and this app expand information embedded in the PCAs/EOFs to corresponding information
 ## in the form of station series or gridded maps.
 
-library(shiny)
-library(shinydashboard)
-library(ggplot2)
-library(esd)
-#source("~/git/esd/R/as.station.R")
-source("~/git/esd/R/retrieve.R")
+#library(esd)
 
 varname <- function(x, long=TRUE) {
   if(long) {
@@ -337,7 +332,6 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     attr(m, "variable") <- attr(Z, "variable")
     m2 <- m
     cex <- cex*0.1
-    
     show.field <- FALSE
     show.stations <- TRUE
   } else browser()
@@ -364,6 +358,7 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
       colbar$breaks <- pretty(m,n=17)
   }
   if(verbose) print(colbar)
+  cb <- colbar.ini(m,FUN=NULL,colbar=colbar,verbose=verbose)
   
   ## Set up map
   par(mar=c(3,1,1.5,3), mgp=c(1,0.5,0))
@@ -375,27 +370,27 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   
   ## Add field 
   if (show.field) {
-    cb <- colbar.ini(m,FUN=NULL,colbar=colbar,verbose=verbose)
+    #cb <- colbar.ini(m,FUN=NULL,colbar=colbar,verbose=verbose)
     image(lon(m),lat(m),m,xlab="",ylab="",add=TRUE,
           col=cb$col,breaks=cb$breaks,xlim=xlim,ylim=ylim)
   }
   
   ## Add stations
   if (show.stations) {
-    cb2 <- colbar.ini(m2,FUN=NULL,colbar=colbar,verbose=verbose)
-    icol <- apply(as.matrix(m2),2,findInterval,cb2$breaks)
-    col <- cb2$col[icol]
+    #cb <- colbar.ini(m2,FUN=NULL,colbar=colbar,verbose=verbose)
+    icol <- apply(as.matrix(m2),2,findInterval,cb$breaks)
+    col <- cb$col[icol]
     points(lon(m2), lat(m2), pch = pch,
-           bg=cb2$col[icol], col=col, cex=cex)
+           bg=cb$col[icol], col=col, cex=cex)
   }
   
   ## Add colorbar
   par(xaxt="s",yaxt="s",las=1,col.axis='black',col.lab='black',
       cex.lab=0.5,cex.axis=0.5)
-  image.plot(breaks=colbar$breaks,
-             lab.breaks=colbar$breaks, horizontal=TRUE,
-             legend.only=TRUE, zlim=range(colbar$breaks),
-             col=colbar$col, legend.width=1, legend.line=2,
+  image.plot(breaks=cb$breaks,
+             lab.breaks=cb$breaks, horizontal=TRUE,
+             legend.only=TRUE, zlim=range(cb$breaks),
+             col=cb$col, legend.width=1, legend.line=2,
              axis.args = list(cex.axis=1, hadj=0.5, mgp=c(0,0.5,0)), 
              border=FALSE)
 
@@ -639,6 +634,7 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
     scale_fill_manual(values = cols) + 
     xlab(xlab) + ylab(ylab) + ggtitle(main) +
     theme_minimal()
+    
   if(attr(y1, "unit")!=attr(y2, "unit")) {
     if(is.null(ylab2)) ylab2 <- paste0(attr(y2, "longname")[1], 
                                        "  (", attr(y2,"unit")[1], ")")
@@ -650,6 +646,7 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
             axis.title.y.right = element_text(color= cols[2])
     )
   }
+  
   p
 
 }
