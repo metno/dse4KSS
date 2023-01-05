@@ -420,6 +420,21 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
 }
 
 
+stmap <- function(z, is=NULL, xlim=NULL, ylim=NULL,
+                  col="black", pch=19, cex=2, verbose=FALSE) {
+  if(verbose) print("stmap")
+  if(!inherits(z, "station")) z <- as.station(z)
+  if(is.null(is)) {
+    is <- 1
+  } else if(is.character(is)) {
+    is <- grep(cleanstr(is, "[A-Z]"), stid(z))
+  }
+  y <- subset(z, is=is)
+  data(Oslo)
+  map(Oslo, cex=0, main=" ", xlim=xlim, ylim=ylim)
+  points(lon(y), lat(y), col=col, pch=pch, cex=cex)
+}
+
 ## Plot individual station
 stplot <- function(z, is=NULL, it=NULL, im=NULL, main=NULL, 
                    MET="ESD", ylim=NULL, verbose=FALSE) {
@@ -627,9 +642,9 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
                      q5 = c(q5_1, q5_2), 
                      q95 = c(q95_1, q95_2))
   cols <- c("darkgreen", "orange")
-  p <- ggplot(data = data, aes(x = date, y = mean), size = 2) + 
+  p <- ggplot(data = data, aes(x = date, y = mean)) + 
     geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
-    geom_line(aes(x = date, y = mean, color=ensemble), size = 1) + 
+    geom_line(aes(x = date, y = mean, color=ensemble), linewidth = 1) + 
     scale_color_manual(values = cols) +
     scale_fill_manual(values = cols) + 
     xlab(xlab) + ylab(ylab) + ggtitle(main) +

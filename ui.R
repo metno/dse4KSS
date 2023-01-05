@@ -24,7 +24,7 @@ gcmbox1 <- box(
   status = 'primary',
   collapsible = TRUE,
   collapsed = TRUE,
-  div(style = "font-size:11px",
+  div(style = "font-size:12px",
       actionButton("gcmall1",
                    label = "All simulations",
                    width = '150px'
@@ -55,7 +55,7 @@ gcmbox2 <- box(
   status = 'primary',
   collapsible = TRUE,
   collapsed = TRUE,
-  div(style = "font-size:11px",
+  div(style = "font-size:12px",
       actionButton("gcmall2",
                    label = "All simulations",
                    width = '150px'
@@ -81,7 +81,7 @@ gcmbox2 <- box(
 
 selectA <- box(width = NULL, status="warning", title="Ensemble A",
                collapsible = TRUE, collapsed=FALSE,
-    div(style = "font-size:11px",
+    div(style = "font-size:12px",
         selectInput("reg1",
                     label = "Region",
                     choices = unique(cats$region),
@@ -107,7 +107,7 @@ selectA <- box(width = NULL, status="warning", title="Ensemble A",
 
 selectB <- box(width=NULL, status="warning", title = "Ensemble B",
                collapsible = TRUE, collapsed=FALSE,
-    div(style = "font-size:11px",
+    div(style = "font-size:12px",
         selectInput("reg2",
                     label = "Region",
                     choices = unique(cats$region),
@@ -132,21 +132,17 @@ selectB <- box(width=NULL, status="warning", title = "Ensemble B",
 )
 
 timeseries <- box(width=NULL, title="Time series",
-                  collapsible = TRUE, collapsed=FALSE, 
-                  column(12,
-                         plotOutput("figts", width = "100%", height = "50%")
-                  ),
-                  column(6,
-                  selectInput("location1",
+                  collapsible = TRUE, collapsed=FALSE,
+                  column(3,
+		         selectInput("location1",
                               label = "Location",
                               choices = locs[[reg0]][[var0]]$label,
-                              selected = locs[[reg0]][[var0]]$label[[1]])
+                              selected = locs[[reg0]][[var0]]$label[[1]]),
+			 plotOutput("mapts", width="100%", height="100%")
+			 
                   ),
-                  column(6,
-                  sliderInput("tsrange1", label="Range of y-axis",
-                              min=-30, max=50, step = 1, value=c(-5,20))#,
-#                  sliderInput("tsrange2", label="Range of y-axis",
-#                              min=-30, max=50, step = 1, value=c(-5,20))))
+		  column(9,
+                         plotOutput("figts", width = "100%", height = "50%")
                   )
 )
 
@@ -155,16 +151,9 @@ maps <- box(width=NULL, title="Maps",
             collapsible = TRUE, collapsed=FALSE,
             column(6,
                    h5("Ensemble A"),
-                   plotOutput("fig1", width = "100%", height = "80%"),
-                   downloadButton(label = "save",
-                                  outputId = "savemaps"),
                    br(),
                    br(),
-                   htmlOutput("main1"),
-                   br(),
-                   br(),
-                   
-                   selectInput("fun1",
+		   selectInput("fun1",
                                label = "Time aggregation",
                                choices=c('mean','trend','max','min','sd'),
                                selected='mean'),
@@ -172,20 +161,21 @@ maps <- box(width=NULL, title="Maps",
                                label="Years",
                                choices=names(datelist),
                                selected=names(datelist)[[2]]),
-                   sliderInput("valrange1", label="Range of colorscale/y-axis",
-                               min=-30, max=50, step = 1, value=c(-5,20))
-                   
+		   br(),
+		   br(),
+                   htmlOutput("main1"),
+		   br(),
+		   br(),
+                   plotOutput("fig1", width = "100%", height = "80%"),
+                   downloadButton(label = "save",
+                                  outputId = "savemaps"),
+                   br(),
+                   br()                   
             ),
             column(6, 
                    h5("Ensemble B"),
-                   plotOutput("fig2", width = "100%", height = "80%"),
-                   downloadButton(label = "save",
-                                  outputId = "savemaps2"),
-                   br(),
-                   br(),
-                   htmlOutput("main2"),
-                   br(),
-                   br(),
+		   br(),
+		   br(),
                    selectInput("fun2",
                                label = "Time aggregation",
                                choices=c('mean','trend','max','min','sd'),
@@ -194,19 +184,35 @@ maps <- box(width=NULL, title="Maps",
                                label="Years",
                                choices=names(datelist),
                                selected=names(datelist)[[length(datelist)]]),
-                   sliderInput("valrange2", label="Range of colorscale/y-axis",
-                               min=-30, max=50, step = 1, value=c(-5,20))
+                   br(),
+                   br(),
+                   htmlOutput("main2"),
+		   br(),
+		   br(),
+                   plotOutput("fig2", width = "100%", height = "80%"),
+                   downloadButton(label = "save",
+                                  outputId = "savemaps2"),
+                   br(),
+                   br()
             )
 )
 
 advanced <- box(width=NULL, title="Advanced settings",
                 collapsible = TRUE, collapsed=TRUE,
+		column(6,
+        	sliderInput("valrange1", label="Range of colorscale in map A",
+                               min=-30, max=50, step = 1, value=c(-5,20)),
+                sliderInput("valrange2", label="Range of colorscale in map B",
+                               min=-30, max=50, step = 1, value=c(-5,20)),
+		sliderInput("tsrange1", label="Range of y-axis in time series plot",
+                              min=-30, max=50, step = 1, value=c(-5,20)),
                 checkboxInput("landmask",
-                              label = "mask ocean (RCM)",
+                              label = "mask ocean in maps with regional climate model (RCM) results",
                               value = TRUE),
                 checkboxInput("robustness_map",
-                              label = "show trend robustness (same sign in 90% of ensemble members)",
+                              label = "show trend robustness (same sign in 90% of ensemble members) in maps",
                               value = TRUE)
+			      )
 )
 
 

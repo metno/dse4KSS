@@ -306,7 +306,7 @@ shinyServer(function(input, output, session) {
                trends=T4[[input$reg1]][[var1()]][[input$sce2]][[season1()]])
   })
 
-  ## Show map of gridded temperature
+  ## Show time series of two data sets at a location
   output$figts <- renderPlot({
     print('output$fig12')
     z <- zload_station()
@@ -315,6 +315,13 @@ shinyServer(function(input, output, session) {
              im1=im1(), im2=im2(), ylim=input$tsrange1)
   }, height=function(){0.6*session$clientData$output_figts_width})
 
+
+  ## Show location of selected station on map
+  output$mapts <- renderPlot({
+    print('output$fig12')
+    z <- zload_station()
+    stmap(z, is=input$location1, xlim=xlim1(), ylim=ylim1())
+  }, height=function(){1.1*session$clientData$output_mapts_width})
 
   ## Show map of gridded temperature
   output$fig1 <- renderPlot({
