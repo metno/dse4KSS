@@ -623,8 +623,8 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
     mean_2 <- apply(y2, 1, mean)
     min_2 <- apply(y2, 1, min)
     max_2 <- apply(y2, 1, max)
-    q5_1 <- apply(y2, 1, q5)
-    q95_1 <- apply(y2, 1, q95)
+    q5_2 <- apply(y2, 1, q5)
+    q95_2 <- apply(y2, 1, q95)
   } else {
     mean_2 <- y2
     min_2 <- subset(attr(y2, "min"), is=is, it=it)
@@ -644,7 +644,7 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
   cols <- c("darkgreen", "orange")
   p <- ggplot(data = data, aes(x = date, y = mean)) + 
     geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
-    geom_line(aes(x = date, y = mean, color=ensemble), linewidth = 1) + 
+    geom_line(aes(x = date, y = mean, color=ensemble), linewidth=1) + 
     scale_color_manual(values = cols) +
     scale_fill_manual(values = cols) + 
     xlab(xlab) + ylab(ylab) + ggtitle(main) +
