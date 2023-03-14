@@ -367,7 +367,6 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   esd::map(Oslo, cex=0.1, main=main, mar=par0$mar, mgp=par0$mgp,
            xlim=xlim, ylim=ylim, xlab="", ylab="", fig=fig,
            new=new, add=add, cex.sub=0.8)
-  
   ## Add field 
   if (show.field) {
     #cb <- colbar.ini(m,FUN=NULL,colbar=colbar,verbose=verbose)
@@ -384,15 +383,32 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
            bg=cb$col[icol], col=col, cex=cex)
   }
   
+  varnm <- attr(m,"variable")
+  varnm <- switch(varnm, "precip"="Precipitation",
+                  "pr"="Preciptiation", "fw"="Wet-day~frequency",
+                  "mu"="Wet-day~mean~precipitation",
+                  "t2m"="Temperature", "tas"="Temperature", varnm)
+  unitx <- gsub(" ","~",attr(m, "unit"))
+  label <- eval(parse(text=paste('expression(',varnm,'~(',unitx,')',')')))
+
   ## Add colorbar
-  par(xaxt="s",yaxt="s",las=1,col.axis='black',col.lab='black',
-      cex.lab=0.5,cex.axis=0.5)
-  image.plot(breaks=cb$breaks,
-             lab.breaks=cb$breaks, horizontal=TRUE,
-             legend.only=TRUE, zlim=range(cb$breaks),
-             col=cb$col, legend.width=1, legend.line=2,
-             axis.args = list(cex.axis=1, hadj=0.5, mgp=c(0,0.5,0)), 
-             border=FALSE)
+  dy <- diff(ylim)*0.07
+  below <- c(min(xlim), min(ylim)-dy/2, max(xlim), min(ylim)+dy/2)
+  rect(below[1], below[2]-2*dy, below[3], below[4], 
+       col = "white", border = "white")
+  col.bar(below[1],below[2],below[3],below[4],
+          cb$breaks, horiz=TRUE, pch=15, v=1, h=1,
+          col=cb$col, cex=2, cex.lab=1,
+          type="r", verbose=FALSE, vl=1, border=FALSE)
+  title(sub = label, line = 0.5, cex.sub = 1)
+  #par(xaxt="s",yaxt="s",las=1,col.axis='black',col.lab='black',
+  #    cex.lab=0.5,cex.axis=0.5, new=TRUE)
+  #image.plot(breaks=cb$breaks, add=TRUE,
+  #           lab.breaks=cb$breaks, horizontal=TRUE,
+  #           legend.only=TRUE, zlim=range(cb$breaks),
+  #           col=cb$col, legend.width=1, legend.line=2,
+  #           axis.args = list(cex.axis=1, hadj=0.5, mgp=c(0,0.5,0)), 
+  #           border=FALSE)
 
   ## Add trend robustness
   if(show.robustness & FUN=='trend') { 
@@ -623,8 +639,8 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
     mean_2 <- apply(y2, 1, mean)
     min_2 <- apply(y2, 1, min)
     max_2 <- apply(y2, 1, max)
-    q5_1 <- apply(y2, 1, q5)
-    q95_1 <- apply(y2, 1, q95)
+    q5_2 <- apply(y2, 1, q5)
+    q95_2 <- apply(y2, 1, q95)
   } else {
     mean_2 <- y2
     min_2 <- subset(attr(y2, "min"), is=is, it=it)

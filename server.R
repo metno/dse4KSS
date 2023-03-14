@@ -139,7 +139,6 @@ shinyServer(function(input, output, session) {
       }
       sel <- choices[is]
     }
-    #browser()
     updateSelectInput(session, "location1",
                       choices = choices, # update choices
                       selected = sel) # remove selection
@@ -282,7 +281,7 @@ shinyServer(function(input, output, session) {
   figure1 <- reactive({
     print('output$figure1')
     z <- zload_pc()
-    mapgridded(z, im=im1(), it=it1(),
+    mapgridded(z, im=im1(), it=it1(), verbose=FALSE,
                FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange1, n=22)),
@@ -296,7 +295,7 @@ shinyServer(function(input, output, session) {
   figure2 <- reactive({
     print('output$figure2')
     z <- zload_pc_2()
-    mapgridded(z, im=im2(), it=it1(),
+    mapgridded(z, im=im2(), it=it1(), verbose=FALSE,
                FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange2, n=22)),
@@ -332,7 +331,7 @@ shinyServer(function(input, output, session) {
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange1, n=22)),
                show.robustness = input$robustness_map,
-               xlim=xlim1(), ylim=ylim1(),
+               xlim=xlim1(), ylim=ylim1(), verbose=FALSE,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
   }, height=function(){1.0*session$clientData$output_fig1_width})
@@ -346,7 +345,7 @@ shinyServer(function(input, output, session) {
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange2, n=22)),
                show.robustness = input$robustness_map,
-               xlim=xlim2(), ylim=ylim2(),
+               xlim=xlim2(), ylim=ylim2(), verbose=FALSE,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[input$reg1]][[var1()]][[input$sce2]][[season1()]])
   }, height=function(){1.0*session$clientData$output_fig2_width})
