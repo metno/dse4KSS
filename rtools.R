@@ -660,7 +660,7 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
   cols <- c("darkgreen", "orange")
   p <- ggplot(data = data, aes(x = date, y = mean)) + 
     geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
-    geom_line(aes(x = date, y = mean, color=ensemble), linewidth = 1) + 
+    geom_line(aes(x = date, y = mean, color=ensemble), linewidth=1) + 
     scale_color_manual(values = cols) +
     scale_fill_manual(values = cols) + 
     xlab(xlab) + ylab(ylab) + ggtitle(main) +

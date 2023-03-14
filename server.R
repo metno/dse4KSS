@@ -9,10 +9,44 @@ shinyServer(function(input, output, session) {
   season1 <- reactive({ seasonname(input$seas1, long=FALSE) })
 
   # Variable name - figure 2
-  var2 <- reactive({ varname(input$var2, long=FALSE) })
+  #var2 <- reactive({ varname(input$var2, long=FALSE) })
+  var2 <- reactive({ varname(input$var1, long=FALSE) })
 
   # Season name - figure 2
-  season2 <- reactive({ seasonname(input$seas2, long=FALSE) })
+  #season2 <- reactive({ seasonname(input$seas2, long=FALSE) })
+  season2 <- reactive({ seasonname(input$seas1, long=FALSE) })
+  
+  region1 <- reactive({ 
+    if(grepl("ESD",toupper(input$src1))) {
+      region <- cleanstr(gsub("ESD","",input$src1))
+    } else {
+      region <- "Nordic"
+    }
+    return(region)
+  })
+
+  region2 <- reactive({ 
+    if(grepl("ESD",toupper(input$src2))) {
+      region <- cleanstr(gsub("ESD","",input$src2))
+    } else {
+      region <- "Nordic"
+    }
+    return(region)
+  })
+  
+  source1 <- reactive({ 
+    if(grepl("ESD",toupper(input$src1))) {
+      x <- "ESD"
+    } else x <- input$src1
+    return(x)
+  })
+    
+  source2 <- reactive({ 
+    if(grepl("ESD",toupper(input$src2))) {
+      x <- "ESD"
+    } else x <- input$src2
+    return(x)
+  })
 
   # Date range - figure 1
   it1 <- reactive({
@@ -25,10 +59,10 @@ shinyServer(function(input, output, session) {
   })
 
   # Longitude and latitude range for the two maps
-  xlim1 <- reactive({ maprange(tolower(input$reg1))$lon })
-  ylim1 <- reactive({ maprange(tolower(input$reg1))$lat })
-  xlim2 <- reactive({ maprange(tolower(input$reg1))$lon })
-  ylim2 <- reactive({ maprange(tolower(input$reg1))$lat })
+  xlim1 <- reactive({ maprange(tolower(region1()))$lon })
+  ylim1 <- reactive({ maprange(tolower(region1()))$lat })
+  xlim2 <- reactive({ maprange(tolower(region1()))$lon })
+  ylim2 <- reactive({ maprange(tolower(region1()))$lat })
 
   # Update ensemble when changing variable or scenario  - figure 1
   observe({
@@ -122,8 +156,8 @@ shinyServer(function(input, output, session) {
 
   # Update location choices when variable or region is changed - location 1
   observe({
-    choices1 <- locs[[input$reg1]][[var1()]]$label
-    choices2 <- locs[[input$reg2]][[var2()]]$label
+    choices1 <- locs[[region1()]][[var1()]]$label
+    choices2 <- locs[[region2()]][[var2()]]$label
     choices <- choices1[choices1 %in% choices2]
     if(input$location1!="-") {
       if(input$location1 %in% choices) {
@@ -165,8 +199,8 @@ shinyServer(function(input, output, session) {
 
   # Load data for figure 1
   zload_pc <- reactive({
-    Z <- zload(path="data", type="field", src=input$src1,
-          region=input$reg1, param=var1(), season=season1(),
+    Z <- zload(path="data", type="field", src=source1(),
+          region=region1(), param=var1(), season=season1(),
           scenario=input$sce1, FUN=input$fun1,
           FUNX=NULL, verbose=FALSE)
     return(Z)
@@ -174,8 +208,8 @@ shinyServer(function(input, output, session) {
 
   # Load data for figure 2
   zload_pc_2 <- reactive({
-    Z <- zload(path="data", type="field", src=input$src2,
-          region=input$reg1, param=var2(), season=season2(),
+    Z <- zload(path="data", type="field", src=source2(),
+          region=region2(), param=var2(), season=season2(),
           scenario=input$sce2, FUN=input$fun2,
           FUNX=NULL, verbose=FALSE)
     return(Z)
@@ -183,8 +217,8 @@ shinyServer(function(input, output, session) {
 
   # Load data and transform to station data - figure 1
   zload_station <- reactive({
-    Z <- zload(path="data", type="field", src=input$src1,
-               region=input$reg1, param=var1(), season=season1(),
+    Z <- zload(path="data", type="field", src=source1(),
+               region=region1(), param=var1(), season=season1(),
                scenario=input$sce1, FUN="mean",
                FUNX=NULL, verbose=FALSE)
     if(inherits(Z,"dsensemble")) {
@@ -194,12 +228,12 @@ shinyServer(function(input, output, session) {
       attr(y, "unit") <- attr(Z, "unit")
     } else {
       y <- Z
-      ymax <- zload(path="data", type="field", src=input$src1,
-                    region=input$reg1, param=var1(), season=season1(),
+      ymax <- zload(path="data", type="field", src=source1(),
+                    region=region1(), param=var1(), season=season1(),
                     scenario=input$sce1, FUN="mean",
                     FUNX="max", verbose=FALSE)
-      ymin <- zload(path="data", type="field", src=input$src1,
-                    region=input$reg1, param=var1(), season=season1(),
+      ymin <- zload(path="data", type="field", src=source1(),
+                    region=region1(), param=var1(), season=season1(),
                     scenario=input$sce1, FUN="mean",
                     FUNX="min", verbose=FALSE)
       attr(y, "max") <- ymax
@@ -210,8 +244,8 @@ shinyServer(function(input, output, session) {
 
   # Load data and transform to station data - figure 2
   zload_station_2 <- reactive({
-    Z <- zload(path="data", type="field", src=input$src2,
-               region=input$reg1, param=var2(), season=season2(),
+    Z <- zload(path="data", type="field", src=source2(),
+               region=region2(), param=var2(), season=season2(),
                scenario=input$sce2, FUN="mean",
                FUNX=NULL, verbose=FALSE)
     if(inherits(Z,"dsensemble")) {
@@ -221,12 +255,12 @@ shinyServer(function(input, output, session) {
       attr(y, "unit") <- attr(Z, "unit")
     } else {
       y <- Z
-      ymax <- zload(path="data", type="field", src=input$src2,
-                 region=input$reg1, param=var2(), season=season2(),
+      ymax <- zload(path="data", type="field", src=source2(),
+                 region=region2(), param=var2(), season=season2(),
                  scenario=input$sce2, FUN="mean",
                  FUNX="max", verbose=FALSE)
-      ymin <- zload(path="data", type="field", src=input$src2,
-                    region=input$reg1, param=var2(), season=season2(),
+      ymin <- zload(path="data", type="field", src=source2(),
+                    region=region2(), param=var2(), season=season2(),
                     scenario=input$sce2, FUN="mean",
                     FUNX="min", verbose=FALSE)
       attr(y, "max") <- ymax
@@ -251,7 +285,7 @@ shinyServer(function(input, output, session) {
 
   # Caption for figure 1
   output$main1 <- renderText(paste0("<b>", input$fun1, "</b>",
-                                    " of the ",switch(input$src1,
+                                    " of the ",switch(source1(),
                                                       "ESD" = "statistically downscaled (<b>ESD</b>) ",
                                                       "RCM" = "dynamically downscaled (<b>RCM</b>) ",
                                                       "GCM" = "global climate model output (GCM) of "),
@@ -265,7 +299,7 @@ shinyServer(function(input, output, session) {
 
   # Caption for figure 2
   output$main2 <- renderText(paste0("<b>", input$fun2, "</b>",
-                                    " of the ",switch(input$src2,
+                                    " of the ",switch(source2(),
                                                       "ESD" = "statistically downscaled (<b>ESD</b>) ",
                                                       "RCM" = "dynamically downscaled (<b>RCM</b>) ",
                                                       "GCM" = "global climate model output (GCM) of "),
@@ -282,13 +316,13 @@ shinyServer(function(input, output, session) {
     print('output$figure1')
     z <- zload_pc()
     mapgridded(z, im=im1(), it=it1(), verbose=FALSE,
-               FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1,
+               FUN=input$fun1, FUNX="mean", MET=source1(),#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange1, n=22)),
                show.robustness = input$robustness_map,
                xlim=xlim1(), ylim=ylim1(),
                threshold = 0.9,#input$threshold_map/100,
-               trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
+               trends=T4[[region1()]][[var1()]][[input$sce1]][[season1()]])
   })
 
   # Reactive plot function for saving - figure 1
@@ -296,13 +330,13 @@ shinyServer(function(input, output, session) {
     print('output$figure2')
     z <- zload_pc_2()
     mapgridded(z, im=im2(), it=it1(), verbose=FALSE,
-               FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1,
+               FUN=input$fun2, FUNX="mean", MET=source2(),#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange2, n=22)),
                show.robustness = input$robustness_map,
                xlim=xlim2(), ylim=ylim2(),
                threshold = 0.9,#input$threshold_map/100,
-               trends=T4[[input$reg1]][[var1()]][[input$sce2]][[season1()]])
+               trends=T4[[region1()]][[var1()]][[input$sce2]][[season1()]])
   })
 
   ## Show time series of two data sets at a location
@@ -327,13 +361,13 @@ shinyServer(function(input, output, session) {
     print('output$fig1')
     z <- zload_pc()
     mapgridded(z, im=im1(), it=it1(), oceanmask=input$landmask,
-               FUN=input$fun1, FUNX="mean", MET=input$src1,#input$funx1,
+               FUN=input$fun1, FUNX="mean", MET=source1(),#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange1, n=22)),
                show.robustness = input$robustness_map,
                xlim=xlim1(), ylim=ylim1(), verbose=FALSE,
                threshold = 0.9,#input$threshold_map/100,
-               trends=T4[[input$reg1]][[var1()]][[input$sce1]][[season1()]])
+               trends=T4[[region1()]][[var1()]][[input$sce1]][[season1()]])
   }, height=function(){1.0*session$clientData$output_fig1_width})
 
   ## Show map of gridded temperature
@@ -341,13 +375,13 @@ shinyServer(function(input, output, session) {
     print('output$fig2')
     z <- zload_pc_2()
     mapgridded(z, im=im2(), it=it1(), oceanmask=input$landmask,
-               FUN=input$fun2, FUNX="mean", MET=input$src2,#input$funx1,
+               FUN=input$fun2, FUNX="mean", MET=source2(),#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange2, n=22)),
                show.robustness = input$robustness_map,
                xlim=xlim2(), ylim=ylim2(), verbose=FALSE,
                threshold = 0.9,#input$threshold_map/100,
-               trends=T4[[input$reg1]][[var1()]][[input$sce2]][[season1()]])
+               trends=T4[[region2()]][[var2()]][[input$sce2]][[season2()]])
   }, height=function(){1.0*session$clientData$output_fig2_width})
 
   output$savefig1 <- downloadHandler(
