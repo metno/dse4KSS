@@ -102,3 +102,5 @@ scenarios <- paste(toupper(scenarios),
                    c("(CMIP5)","(CMIP6)")[as.numeric(grepl("SSP", scenarios))+1])
 names(scenarios) <- unique(sces)
 
+
+

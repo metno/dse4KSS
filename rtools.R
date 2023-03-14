@@ -321,7 +321,6 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   } else if(inherits(Z,"station")) {
     if(is.null(it) | FUN == "trend") it <- c(1950,2100)
     if(verbose) print(paste('it=',paste(it,collapse=' - ')))
-    
     if(grepl("trend",attr(Z,"variable"))) {
       m <- map.station(Z, FUN="mean", plot=FALSE)
     } else {
@@ -361,12 +360,36 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   cb <- colbar.ini(m,FUN=NULL,colbar=colbar,verbose=verbose)
   
   ## Set up map
-  par(mar=c(3,1,1.5,3), mgp=c(1,0.5,0))
   par0 <- par()
-  data(Oslo)
-  esd::map(Oslo, cex=0.1, main=main, mar=par0$mar, mgp=par0$mgp,
-           xlim=xlim, ylim=ylim, xlab="", ylab="", fig=fig,
-           new=new, add=add, cex.sub=0.8)
+  par(xaxt="n",yaxt="n",bty="n")
+  plot(range(lon(m)),range(lat(m)),type="n",xlim=xlim,ylim=ylim,new=FALSE,
+       xlab="",ylab="")
+  
+  if(diff(range(xlim))>10) {
+    dlon <- round(round(diff(range(xlim))/4)/5)*5
+  } else if(diff(range(xlim))<2) {
+    dlon <- round(diff(range(xlim))/3, 2)
+  } else {
+    dlon <- round(diff(range(xlim))/4)
+  }
+  if(diff(range(ylim))>10) {
+    dlat <- round(round(diff(range(ylim))/4)/5)*5
+  } else if(diff(range(ylim))<2) {
+    dlat <- round(diff(range(ylim))/3, 2)
+  } else {
+    dlat <- round(diff(range(ylim))/4)
+  }
+  par(xaxt="s",yaxt="s",las=1,col.axis='grey',col.lab='grey',
+      cex.lab=1,cex.axis=1,xpd=FALSE)
+  axis(3,seq(floor(par("xaxp")[1]/dlon)*dlon,par("xaxp")[2],by=dlon),col='grey')
+  axis(4,seq(floor(par("yaxp")[1]/dlat)*dlat,par("yaxp")[2],by=dlat),col='grey')
+  grid()
+  
+  data("geoborders", envir = environment())
+  lines(geoborders$x,geoborders$y,col='grey', lwd=1.5)
+  lines(attr(geoborders,'border')$x,attr(geoborders,'border')$y,
+        col=adjustcolor('grey', alpha.f=0.7), lwd=0.75)
+  
   ## Add field 
   if (show.field) {
     #cb <- colbar.ini(m,FUN=NULL,colbar=colbar,verbose=verbose)
@@ -384,6 +407,7 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   }
   
   varnm <- attr(m,"variable")
+  varnm <- gsub(" ","~",varnm)
   varnm <- switch(varnm, "precip"="Precipitation",
                   "pr"="Preciptiation", "fw"="Wet-day~frequency",
                   "mu"="Wet-day~mean~precipitation",
@@ -400,15 +424,7 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
           cb$breaks, horiz=TRUE, pch=15, v=1, h=1,
           col=cb$col, cex=2, cex.lab=1,
           type="r", verbose=FALSE, vl=1, border=FALSE)
-  title(sub = label, line = 0.5, cex.sub = 1)
-  #par(xaxt="s",yaxt="s",las=1,col.axis='black',col.lab='black',
-  #    cex.lab=0.5,cex.axis=0.5, new=TRUE)
-  #image.plot(breaks=cb$breaks, add=TRUE,
-  #           lab.breaks=cb$breaks, horizontal=TRUE,
-  #           legend.only=TRUE, zlim=range(cb$breaks),
-  #           col=cb$col, legend.width=1, legend.line=2,
-  #           axis.args = list(cex.axis=1, hadj=0.5, mgp=c(0,0.5,0)), 
-  #           border=FALSE)
+  title(sub = label, line = 0.75, cex.sub = 1)
 
   ## Add trend robustness
   if(show.robustness & FUN=='trend') { 
