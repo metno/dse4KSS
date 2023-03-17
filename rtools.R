@@ -50,6 +50,14 @@ cleanstr <- function(x, remove=NULL) {
   return(y)
 }
 
+first2upper <- function(x) {
+  up <- function(a) if(nchar(a)==1 | grepl("\\b[I|V|X|L|C|D|M]{1,20}\\b",a)) return(toupper(a)) else 
+    return(paste0(toupper(substr(a,1,1)), tolower(substr(a,2,nchar(a)))))
+  allup <- function(b) paste(sapply(unlist(strsplit(b," ")), up), collapse=" ")
+  y <- sapply(x, allup)
+  return(y)
+}
+
 maprange <- function(region) {
   is <- list(lon=switch(tolower(region), "nordic"=c(-15,45),
                         "finland"=c(-15,45), c(-15,45)),

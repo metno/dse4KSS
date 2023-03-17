@@ -83,10 +83,13 @@ cats <- data.frame(region=regs,var=vars,src=srcs,nem=nems,sce=sces,it=its)
 locs <- list()
 for(region in unique(regs)) {
   for(var in unique(vars)) {
-    locs[[region]][[var]][["loc"]] <- loc(T4[[region]][[var]][[1]][[1]])
+    locs[[region]][[var]][["location"]] <- loc(T4[[region]][[var]][[1]][[1]])
     locs[[region]][[var]][["stid"]] <- stid(T4[[region]][[var]][[1]][[1]])
     locs[[region]][[var]][["label"]] <- paste0(loc(T4[[region]][[var]][[1]][[1]]),
                                     " (",stid(T4[[region]][[var]][[1]][[1]]),")")
+    locs[[region]][[var]][["longitude"]] <- lon(T4[[region]][[var]][[1]][[1]])
+    locs[[region]][[var]][["latitude"]] <- lat(T4[[region]][[var]][[1]][[1]])
+    locs[[region]][[var]][["altitude"]] <- alt(T4[[region]][[var]][[1]][[1]])
   }
 }
 
