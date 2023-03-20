@@ -211,6 +211,15 @@ maps <- box(width=NULL, title="Maps",
             )
 )
 
+
+leafletmap <- box(width=NULL, title="Maps",
+            collapsible = TRUE, collapsed=FALSE,
+            column(12,
+                   leafletOutput("leafletmap", width = "100%", height = "80%")
+            )
+)
+
+
 advanced <- box(width=NULL, title="Advanced settings",
                 collapsible = TRUE, collapsed=TRUE,
                 column(6,
@@ -231,6 +240,11 @@ advanced <- box(width=NULL, title="Advanced settings",
 
 
 body <- dashboardBody(
+  fluidRow(
+    column(9,
+           leafletmap
+    )
+  ),
   fluidRow(
     column(4,
            selectVar
