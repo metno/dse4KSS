@@ -147,16 +147,15 @@ selectB <- box(width=NULL, status="warning", title = "Ensemble B",
 
 timeseries <- box(width=NULL, title="Time series",
                   collapsible = TRUE, collapsed=FALSE,
-                  column(3,
-                         selectInput("location1",
+                  column(4,
+                         selectInput("location",
                                      label = "Location",
                                      choices = locs[[reg0]][[var0]]$label,
                                      selected = locs[[reg0]][[var0]]$label[[1]]),
-                         leafletOutput("maptsf",width="20vw")
-                         #plotOutput("mapts", width="100%", height="100%")
+                         leafletOutput("map", width="30vw")
                   ),
-                  column(9,
-                         plotOutput("figts", width = "100%", height = "50%")
+                  column(8,
+                         plotOutput("figts", width = "100%", height = "60%")
                   )
 )
 
@@ -212,14 +211,6 @@ maps <- box(width=NULL, title="Maps",
 )
 
 
-leafletmap <- box(width=NULL, title="Maps",
-            collapsible = TRUE, collapsed=FALSE,
-            column(12,
-                   leafletOutput("leafletmap", width = "100%", height = "80%")
-            )
-)
-
-
 advanced <- box(width=NULL, title="Advanced settings",
                 collapsible = TRUE, collapsed=TRUE,
                 column(6,
@@ -240,11 +231,6 @@ advanced <- box(width=NULL, title="Advanced settings",
 
 
 body <- dashboardBody(
-  fluidRow(
-    column(9,
-           leafletmap
-    )
-  ),
   fluidRow(
     column(4,
            selectVar

@@ -86,7 +86,7 @@ locs <- list()
 for(region in unique(regs)) {
   for(var in unique(vars)) {
     locs[[region]][[var]][["location"]] <- loc(T4[[region]][[var]][[1]][[1]])
-    locs[[region]][[var]][["stid"]] <- stid(T4[[region]][[var]][[1]][[1]])
+    locs[[region]][[var]][["station_id"]] <- stid(T4[[region]][[var]][[1]][[1]])
     locs[[region]][[var]][["label"]] <- paste0(loc(T4[[region]][[var]][[1]][[1]]),
                                     " (",stid(T4[[region]][[var]][[1]][[1]]),")")
     locs[[region]][[var]][["longitude"]] <- lon(T4[[region]][[var]][[1]][[1]])
