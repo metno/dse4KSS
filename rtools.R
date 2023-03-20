@@ -4,8 +4,6 @@
 ## to minimise the needed data volume, and this app expand information embedded in the PCAs/EOFs to corresponding information
 ## in the form of station series or gridded maps.
 
-#library(esd)
-
 varname <- function(x, long=TRUE) {
   if(long) {
     y <- switch(x, 
@@ -47,6 +45,20 @@ seasonname <- function(x, long=TRUE) {
 cleanstr <- function(x, remove=NULL) {
   y <- gsub("[[:punct:]]|\\s", "", x)
   if(!is.null(remove)) y <- gsub(remove, "", y)
+  return(y)
+}
+
+first2upper <- function(x) {
+  up <- function(a) {
+    if(nchar(a)==1 | grepl("\\b[I|V|X|L|C|D|M]{1,20}\\b", toupper(a))) {
+      b <- toupper(a)
+    } else {
+      b <- paste0(toupper(substr(a,1,1)), tolower(substr(a,2,nchar(a))))
+    }
+    return(b)
+  }
+  allup <- function(b) {paste(sapply(unlist(strsplit(b, " ")), up), collapse=" ")}
+  y <- sapply(x, allup)
   return(y)
 }
 

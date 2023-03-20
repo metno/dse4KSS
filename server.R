@@ -48,6 +48,23 @@ shinyServer(function(input, output, session) {
     return(x)
   })
 
+  ## SELECT STATION FROM MAP
+  ## Click on the map marker - this updates the station location in the left panel
+  # observeEvent(input$map_marker_click,{
+  #   print("<04: observeEvent() - click")
+  #   fnames <- updatefilenames()
+  #   Y <- updatemetadata()
+  #   event <- input$map_marker_click
+  #   #print(paste('Updated ',input$location)); print(event$id)
+  #   selected <- which(Y$station.id == event$id)
+  #   
+  #   #if (input$exclude== 'Selected') filter[selected] <- FALSE
+  #   updateSelectInput(session,inputId = 'location',label=lab.location[as.numeric(input$lingo)],
+  #                     choices=Y$location,selected = Y$location[selected])
+  #   #print('---click---')
+  # })
+  # 
+  
   # Date range - figure 1
   it1 <- reactive({
     return(datelist[[input$dates1]])
@@ -320,7 +337,7 @@ shinyServer(function(input, output, session) {
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange1, n=22)),
                show.robustness = input$robustness_map,
-               xlim=xlim1(), ylim=ylim1(),
+               xlim=xlim1(), ylim=ylim1(), cex=1.4,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[region1()]][[var1()]][[input$sce1]][[season1()]])
   })
@@ -334,7 +351,7 @@ shinyServer(function(input, output, session) {
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange2, n=22)),
                show.robustness = input$robustness_map,
-               xlim=xlim2(), ylim=ylim2(),
+               xlim=xlim2(), ylim=ylim2(), cex=1.4,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[region1()]][[var1()]][[input$sce2]][[season1()]])
   })
@@ -364,7 +381,7 @@ shinyServer(function(input, output, session) {
                FUN=input$fun1, FUNX="mean", MET=source1(),#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange1, n=22)),
-               show.robustness = input$robustness_map,
+               show.robustness = input$robustness_map, cex=1.4,
                xlim=xlim1(), ylim=ylim1(), verbose=FALSE,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[region1()]][[var1()]][[input$sce1]][[season1()]])
@@ -378,7 +395,7 @@ shinyServer(function(input, output, session) {
                FUN=input$fun2, FUNX="mean", MET=source2(),#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange2, n=22)),
-               show.robustness = input$robustness_map,
+               show.robustness = input$robustness_map, cex=1.4,
                xlim=xlim2(), ylim=ylim2(), verbose=FALSE,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[region2()]][[var2()]][[input$sce2]][[season2()]])
@@ -409,5 +426,219 @@ shinyServer(function(input, output, session) {
       dev.off()
     }
   )
-
+  
+  ## INTERACTIVE MAP
+  # observe({
+  #   print('<23: observe - marker click')
+  #   
+  #   mapid2 <- leafletProxy("mapid") %>% clearPopups()
+  #   event <- input$map_marker_click
+  #   #print('Data Explorer from map'); print(event$id)
+  #   if (is.null(event))
+  #     return()
+  #   
+  #   #print('Click --->'); print(event); print('<--- Click')
+  #   isolate({
+  #     mapid <- showMetaPopup(mapid2,stid=event$id,lat=event$lat, lng = event$lng,ci = as.numeric(input$ci))
+  #   })
+  #   
+  #   #removeMarker("map",layerId = event$id)
+  #   leafletProxy("mapid",data = event) %>%
+  #     addCircles(lng = event$lng, lat = event$lat,color = 'red',layerId = 'selectID', weight = 12)
+  #   
+  #   #selectedStid <- event$id
+  # })
+  # 
+  
+  ## The following are more general reactive expressions
+  zoom <- reactive({
+    print('<20: reactive - zoom()')
+    zoomscale <- 4
+    #zoomscale <- switch(input$src,
+    #                    'metnod'=5,'ecad'=4,'eustance'=4,'Asia'=4,'Pacific'=4,'LatinAmerica'=4,'Africa'=3,'USA'=3,'Australia'=4,
+    #                    'INAM'=6,'CLARIS'=6)
+    return(zoomscale)
+  })
+  
+  # observe({
+  #   print('<23: observe - marker click')
+  #   
+  #   mapid2 <- leafletProxy("mapid") %>% clearPopups()
+  #   event <- input$map_marker_click
+  #   #print('Data Explorer from map'); print(event$id)
+  #   if (is.null(event))
+  #     return()
+  #   
+  #   #print('Click --->'); print(event); print('<--- Click')
+  #   isolate({
+  #     mapid <- showMetaPopup(mapid2, stid = event$id, lat = event$lat, 
+  #                            lng = event$lng, ci = as.numeric(input$ci))
+  #   })
+  #   
+  #   #removeMarker("map", layerId = event$id)
+  #   leafletProxy("mapid", data = event) %>%
+  #     addCircles(lng = event$lng, lat = event$lat, color = 'red', 
+  #                layerId = 'selectID', weight = 12)
+  #   
+  #   #selectedStid <- event$id
+  # })
+  
+  ## The map panel 
+  output$leafletmap <- renderLeaflet({
+     print('<24: output$map - render')
+     Y <- locs[[region1()]][[var1()]]
+     filter <- rep(TRUE, length(Y$longitude))
+     radius <- 1#rep(input$rad,length(statistic[filter]))
+     
+     browser()
+     map <- leaflet(width = 400, height = 200) %>% 
+       addTiles() %>% 
+       addMarkers(lng = -123.251,
+                  lat = 49.263, 
+                  popup = "You are here.")
+     
+     #map <- leaflet() %>%
+     #  addTiles() %>%
+     #  addCircleMarkers(lng = Y$longitude[filter], 
+     #                   lat = Y$latitude[filter], fill = TRUE, 
+     #                   label = paste0(first2upper(Y$location[filter])," (station id: ",Y$stid,")"),
+     #                   labelOptions = labelOptions(direction = "right", textsize = "12px", opacity=0.6),
+     #                   popup = Y$location[filter], popupOptions(keepInView=TRUE),
+     #                   radius = radius, stroke = TRUE, weight = 1, color = 'black',
+     #                   layerId = Y$stid[filter],
+     #                   fillOpacity = 0.4, fillColor = "black") #%>%
+      # setView(lat = xlim1(), lng = ylim1(), zoom=zoom())
+     map
+  })
 })
+  #   Y <- updatemetadata()
+  #   vids <- updatevarids()
+  #   ok <- is.finite(statistic)
+  #   statistic <- statistic[ok]
+  #   print(length(statistic))
+  #   Y <- Y[ok,]
+  #   print(dim(Y))
+  #   
+  #   #print('Stastistic shown on map');print(summary(statistic))
+  #   
+  #   if (input$country=='All') filter <- rep(TRUE,length(statistic)) else {
+  #     filter <- rep(FALSE,length(statistic))
+  #     filter[(Y$country == input$country)] <- TRUE
+  #   }
+  #   
+  #   #print('        <<< input$ci is not updated!!! >>>              ')
+  #   #isolate({print(paste('Range shown in map',input$statisticrange[1],'-',input$statisticrange[1],' ci=',input$ci))})
+  #   filter[statistic < input$statisticrange[1]] <- FALSE
+  #   filter[statistic > input$statisticrange[2]] <- FALSE
+  #   
+  #   highlight <- NULL
+  #   lhighlight <- paste0('#',1:10)
+  #   if (tolower(input$highlight) == "top 10") 
+  #     highlight <- order(statistic[filter],decreasing=TRUE)[1:10] else 
+  #       if (tolower(input$highlight) == "low 10") 
+  #         highlight <- order(statistic[filter],decreasing=FALSE)[1:10] else 
+  #           if (tolower(input$highlight) == "new records") {
+  #             #print('--- Higlight new records ---')
+  #             ## For a specific day, check against the maximum or minimum
+  #             if (tolower(input$statistic)!='specific_day') {
+  #               ## If a specific day is chosen, then compare the last day against maximum values 
+  #               x <- retrieve.station(updatefile(),it=attr(Y,'period')[2],verbose=verbose)
+  #               Z <- c(coredata(x))
+  #               dim(Z) <- c(length(Z),1)
+  #               ## The stations are sorted according to alphabetic order
+  #               Z <- Z[match(Y$station.id,stid(x))]
+  #             } else {
+  #               ## Else compare the selected day against the maximum.
+  #               Z <- statistic
+  #             }
+  #             #print(paste('Minimum?',is.null(Y$min)))
+  #             ## Check if the current day equals the maximum value: if so, then highlight
+  #             if (!is.null(Y$wetmean)) 
+  #               highlight <- (Z[filter] - Y$max[filter] > -0.001) & is.finite(Z[filter]) else 
+  #                 highlight <- ((Z[filter] - Y$max[filter] > -0.001) | 
+  #                                 (Z[filter] - Y$min[filter] < +0.001)) & is.finite(Z[filter])
+  #               #print('RECORDS?')
+  #               highlight[is.na(highlight)] <- FALSE
+  #               #print(paste('Number of records on',input$it,'is',sum(highlight,na.rm=TRUE)))
+  #               #print(paste(Y$location[filter][highlight],Z[filter][highlight]))
+  #               #print(table(highlight)); print(table(filter))
+  #               lhighlight <- rep('Record',sum(highlight,nn.rm=TRUE))
+  #           } 
+  #   
+  #   lon.highlight <- Y$longitude[filter][highlight]
+  #   lat.highlight <- Y$latitude[filter][highlight]
+  #   #if (tolower(input$highlight) != "none") {
+  #   #  print(paste('Highlight',input$highlight))
+  #   #  print(statistic[filter][highlight]); print(lon.highlight); print(lat.highlight)
+  #   #}
+  #   if (sum(filter)==0) {
+  #     #print(paste(input$ci,esd::varid(y),min(statistic),max(statistic),input$statisticrange[1],input$statisticrange[2]))
+  #     filter <- rep(TRUE,length(statistic))  
+  #   }
+  #   if (sum(is.element(vids[as.numeric(input$ci)],c('precip','sd')))>0) reverse <- TRUE else reverse <- FALSE
+  #   if ((input$statistic=="lastrains") | (input$statistic=="mean_drydur")) reverse <- FALSE
+  #   if((input$statistic=="trend_wetfreq") | (input$statistic=="trend_wetmean") |
+  #      (input$statistic=="wetfreq") | (input$statistic=="wetmean")) reverse <- TRUE
+  #   #print(paste('Reverse palette =',reverse)); print(summary(statistic))
+  #   print(c(sum(filter),length(filter),length(statistic))); print(summary(statistic))
+  #   pal <- colorBin(colscal(pal = 't2m',n=10),
+  #                   seq(input$statisticrange[1],input$statisticrange[2],length=10),bins = 10,pretty = TRUE,reverse=reverse)    
+  #   
+  #   ## Only show good data
+  #   good <- is.finite(Y$longitude) & is.finite(Y$latitude) & is.finite(statistic)
+  #   Y <- Y[good,]; statistic <- statistic[good]; filter <- filter[good]
+  #   print('Check statistics and pallette'); str(statistic[filter]); str(pal(statistic[filter]))
+  #   
+  #   ## Mark the selected location
+  #   is <- which(tolower(Y$location[filter]) == tolower(input$location))[1]
+  #   if ( (length(is)==0) | is.na(is) ) is <- 1
+  #   radius <- rep(input$rad,length(statistic[filter]))
+  #   radius[!is.finite(statistic[filter])] <- 1
+  #   
+  #   # print(paste('The map is being rendered:','Number of locations shown=',sum(filter),'with',sum(!is.finite(statistic)),
+  #   #             'bad points - range of values= [',min(statistic,na.rm=TRUE),max(statistic,na.rm=TRUE),'] - slider:',
+  #   #             input$statisticrange[1],'-',input$statisticrange[2],' ci=',input$ci,'is=',is))
+  #   # print(summary(statistic)); print(summary(Y$longitude)); print(summary(Y$latitude))
+  #   # print(paste('Filter: is=',is,'l=',length(filter),'s=',sum(filter),'ID=',Y$station.id[filter][is],
+  #   #           Y$longitude[filter][is],Y$latitude[filter][is],Y$location[filter][is],
+  #   #           'n=',length(statistic[filter]),' good=',sum(good)))
+  #   # str(Y$longitude[filter]); str(Y$latitude[filter])
+  #   # print(paste(Y$location[filter],as.character(round(statistic[filter],digits = 2))))
+  #   # str(radius); 
+  #   str(Y$station.id[filter])
+  #   
+  #   leaflet("mapid") %>% 
+  #     addCircleMarkers(lng = Y$longitude[filter], # longitude
+  #                      lat = Y$latitude[filter],fill = TRUE, # latitude
+  #                      label = paste(Y$location[filter],as.character(round(statistic[filter],digits = 2))),
+  #                      labelOptions = labelOptions(direction = "right",textsize = "12px",opacity=0.6),
+  #                      popup = Y$location[filter],popupOptions(keepInView = TRUE),
+  #                      radius =radius,stroke=TRUE,weight = 1, color='black',
+  #                      layerId = Y$station.id[filter],
+  #                      fillOpacity = 0.4,fillColor=pal(statistic[filter])) #%>% 
+  #     addCircleMarkers(lng = Y$longitude[filter][is], lat = Y$latitude[filter][is],fill=TRUE,
+  #                      label = paste(Y$location[filter][is],as.character(round(statistic[filter][is],digits = 2))),
+  #                      labelOptions = labelOptions(direction = "right",textsize = "12px",opacity=0.6),
+  #                      radius=6,stroke=TRUE, weight=3, color='green',
+  #                      fillOpacity = 0.5,fillColor = pal(statistic[filter])[is],
+  #                      layerId = Y$station.id[filter][is]) %>%
+  #     addCircleMarkers(lng = lon.highlight, lat = lat.highlight,fill=TRUE,
+  #                      label=paste0(lhighlight,': ',Y$location[filter][highlight],' - ',
+  #                                   as.character(round(statistic[filter][highlight],digits = 2))),
+  #                      labelOptions = labelOptions(direction = "right",textsize = "12px",opacity=0.6),
+  #                      radius=6,stroke=TRUE, weight=3, color='black',
+  #                      layerId = Y$station.id[filter][highlight],
+  #                      fillOpacity = 0.5,fillColor=pal(statistic[filter])[highlight]) %>%
+  #     addLegend("bottomright", pal=pal, values=round(statistic[filter], digits = 2), 
+  #               title=legendtitle(),
+  #               layerId="colorLegend",labFormat = labelFormat(big.mark = "")) %>%
+  #     #addProviderTiles(providers$Esri.WorldStreetMap,
+  #     #addProviderTiles(provider$Esri.WorldTopoMap,
+  #     #addProviderTiles(providers$Stamen.TonerLite,
+  #     #addProviderTiles(providers$Stamen.TerrainBackground,
+  #     addProviderTiles(providers$Stamen.Terrain,
+  #                      options = providerTileOptions(noWrap = FALSE)) %>% 
+  #     setView(lat=Y$latitude[filter][is],lng = Y$longitude[filter][is], zoom = zoom())
+  #})
+
+#})
