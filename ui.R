@@ -152,8 +152,8 @@ timeseries <- box(width=NULL, title="Time series",
                                      label = "Location",
                                      choices = locs[[reg0]][[var0]]$label,
                                      selected = locs[[reg0]][[var0]]$label[[1]]),
-                         plotOutput("mapts", width="100%", height="100%")
-                         
+                         leafletOutput("maptsf",width="20vw")
+                         #plotOutput("mapts", width="100%", height="100%")
                   ),
                   column(9,
                          plotOutput("figts", width = "100%", height = "50%")

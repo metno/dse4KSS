@@ -373,6 +373,26 @@ shinyServer(function(input, output, session) {
     stmap(z, is=input$location1, xlim=xlim1(), ylim=ylim1())
   }, height=function(){1.1*session$clientData$output_mapts_width})
 
+  ## Location of selected station on map but leaflet
+  output$maptsf <- renderLeaflet({
+    Y <- locs[[region1()]][[var1()]]
+    selected <- which(Y$label==input$location1)
+    leaflet() %>%
+      addTiles() %>%  
+      addCircleMarkers(lng=Y$longitude, lat=Y$latitude, 
+                 popup=as.list(first2upper(Y$label)),
+                 label=as.list(first2upper(Y$label)),
+                 labelOptions = labelOptions(direction = "right", textsize = "12px", opacity = 0.6),
+                 radius = 3, stroke=TRUE, weight = 1, color='black',
+                 layerId = Y$stid, fillOpacity = 0.4, 
+                 fillColor="black") %>%
+      addCircleMarkers(lng = Y$longitude[selected], lat = Y$latitude[selected], 
+                       fill=TRUE, label=first2upper(Y$label[selected]),
+                       radius=6, stroke=TRUE, weight=3, color='red',
+                       layerId = Y$stid[selected], 
+                       fillOpacity = 0.5, fillColor = "red")
+  })
+  
   ## Show map of gridded temperature
   output$fig1 <- renderPlot({
     print('output$fig1')
