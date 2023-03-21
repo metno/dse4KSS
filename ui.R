@@ -12,6 +12,7 @@ var0 <- "pr"
 sce0 <- "rcp85"
 seas0 <- "djf"
 
+
 header <- dashboardHeader(
   title = "The Nordic region climate atlas",
   titleWidth = '600px'
@@ -96,18 +97,6 @@ selectVar <- box(width = NULL, status="warning", title="Plot settings",
 selectA <- box(width = NULL, status="warning", title="Ensemble A",
                collapsible = TRUE, collapsed=FALSE,
                div(style = "font-size:12px",
-                   #selectInput("reg1",
-                   #            label = "Region",
-                   #            choices = unique(cats$region),
-                   #            selected = reg0),
-                   #selectInput("var1",
-                   #            label = "Variable",
-                   #            choices = as.vector(sapply(unique(cats$var), varname)),
-                   #            selected = varname(var0)),
-                   #selectInput("seas1",
-                   #            label = "Season",
-                   #            choices = as.vector(sapply(unique(cats$it), seasonname)),
-                   #            selected = seasonname(seas0)),
                    selectInput("src1",
                                label="Data source",
                                choices = c("ESD_Nordic", "ESD_Finland", "RCM", "GCM"),
@@ -155,7 +144,7 @@ timeseries <- box(width=NULL, title="Time series",
                          leafletOutput("map", width="30vw")
                   ),
                   column(8,
-                         plotOutput("figts", width = "100%", height = "60%")
+                         plotlyOutput("figts", width = "100%", height = "60%")
                   )
 )
 
@@ -258,10 +247,13 @@ body <- dashboardBody(
 )
 
 
+sideboard <- dashboardSidebar(sidebarMenuOutput("Semi_collapsible_sidebar"))
+
 
 dashboardPage(
   header,
   dashboardSidebar(disable = TRUE),
+  #sideboard,
   body
 )
 

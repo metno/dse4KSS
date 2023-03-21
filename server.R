@@ -2,6 +2,18 @@
 shinyServer(function(input, output, session) {
   #countview <- reactiveValues(i = 1)
 
+  output$Semi_collapsible_sidebar=renderMenu({
+    sidebarMenu(
+      menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
+      menuItem("Widgets", icon = icon("th"), tabName = "widgets",
+               badgeLabel = "new",
+               badgeColor = "green"),
+      menuItem("Charts", icon = icon("bar-chart-o"),
+               menuSubItem("Sub-item 1", tabName = "subitem1"),
+               menuSubItem("Sub-item 2", tabName = "subitem2")
+      ))
+  })
+    
   # Variable name - figure 1
   var1 <- reactive({ varname(input$var1, long=FALSE) })
 
@@ -354,25 +366,19 @@ shinyServer(function(input, output, session) {
   })
 
   ## Show time series of two data sets at a location
-  output$figts <- renderPlot({
+  output$figts <- renderPlotly({
     print('output$fig12')
     z <- zload_station()
     z2 <- zload_station_2()
     stplot12(z, z2, is=input$location, it=c(1950,2100),#it1(),
              im1=im1(), im2=im2(), ylim=input$tsrange1)
-  }, height=function(){0.6*session$clientData$output_figts_width})
+  })#, height=function(){0.6*session$clientData$output_figts_width})
 
 
-  ## Show location of selected station on map
-  #output$mapts <- renderPlot({
-  #  print('output$fig12')
-  #  z <- zload_station()
-  #  stmap(z, is=input$location, xlim=xlim1(), ylim=ylim1())
-  #}, height=function(){1.1*session$clientData$output_mapts_width})
-  
   zoom <- reactive({
     2
   })
+  
   output$map <- renderLeaflet({
     Y <- locs[[region1()]][[var1()]]
     selected <- which(Y$label==input$location)

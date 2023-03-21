@@ -306,15 +306,15 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
       y <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=eof,verbose=verbose)
       m <- map(y,FUN='mean',plot=FALSE)
       if(show.stations | show.robustness) {
-        y2 <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=FALSE,verbose=verbose)
-        m2 <- map.station(y2,FUN='mean',plot=FALSE) 
+        y_B <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=FALSE,verbose=verbose)
+        m2 <- map.station(y_B,FUN='mean',plot=FALSE) 
       }
     } else {
       y <- aggregate.dsensemble(z,FUNX=FUNX,eof=eof,verbose=verbose)
       m <- map(y,FUN=FUN,plot=FALSE)
       if(show.stations | show.robustness) {
-        y2 <- aggregate.dsensemble(z,FUN=FUNX,eof=FALSE,verbose=verbose)
-        m2 <- map.station(y2,FUN=FUN,plot=FALSE)
+        y_B <- aggregate.dsensemble(z,FUN=FUNX,eof=FALSE,verbose=verbose)
+        m2 <- map.station(y_B,FUN=FUN,plot=FALSE)
       }
     }
     if(FUN=="trend") {
@@ -439,10 +439,10 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     if(inherits(Z,"dsensemble") & !is.null(trends)) {
       sig <- apply(trends[im,], 2, function(x) max(sum(x>0), sum(x<0))/length(x))
       s <- sig>=threshold | sig <= (1-threshold)
-      #points(lon(y2)[s], lat(y2)[s], col='black', pch=21, cex=cex*0.8, lwd=lwd)
-      #points(lon(y2)[s], lat(y2)[s], col='black', pch='.', cex=cex*0.1)
-      slonlat <- cbind(round(lon(y2)[s], decimals), 
-                       round(lat(y2)[s], decimals))
+      #points(lon(y_B)[s], lat(y_B)[s], col='black', pch=21, cex=cex*0.8, lwd=lwd)
+      #points(lon(y_B)[s], lat(y_B)[s], col='black', pch='.', cex=cex*0.1)
+      slonlat <- cbind(round(lon(y_B)[s], decimals), 
+                       round(lat(y_B)[s], decimals))
       slonlat <- slonlat[!duplicated(slonlat),]
       points(slonlat[,1], slonlat[,2], col='black', pch='.', cex=cex.robust)
     } else if(inherits(Z,"station")) {
@@ -457,21 +457,6 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   }
 }
 
-
-stmap <- function(z, is=NULL, xlim=NULL, ylim=NULL,
-                  col="black", pch=19, cex=2, verbose=FALSE) {
-  if(verbose) print("stmap")
-  if(!inherits(z, "station")) z <- as.station(z)
-  if(is.null(is)) {
-    is <- 1
-  } else if(is.character(is)) {
-    is <- grep(cleanstr(is, "[A-Z]"), stid(z))
-  }
-  y <- subset(z, is=is)
-  data(Oslo)
-  map(Oslo, cex=0, main=" ", xlim=xlim, ylim=ylim)
-  points(lon(y), lat(y), col=col, pch=pch, cex=cex)
-}
 
 ## Plot individual station
 stplot <- function(z, is=NULL, it=NULL, im=NULL, main=NULL, 
@@ -622,84 +607,112 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
     it <- range(as.numeric(it))
   }
   
-  y1 <- subset(z1, is=is, it=it, im=im1)
-  y2 <- subset(z2, is=is, it=it, im=im2)
+  y_A <- subset(z1, is=is, it=it, im=im1)
+  y_B <- subset(z2, is=is, it=it, im=im2)
   
-  if(is.null(xlim)) xlim <- range(c(index(y1), index(y2)))
+  if(is.null(xlim)) xlim <- range(c(index(y_A), index(y_B)))
   if(is.null(ylim)) {
-    ylim <- range(c(range(y1), range(y2)))
+    ylim <- range(c(range(y_A), range(y_B)))
     ylim <- ylim + c(-1,1)*diff(ylim)*0.1
   }
   if(is.null(xlab)) {
-    if(is.years(index(y1))) {
+    if(is.years(index(y_A))) {
       xlab <- "Years"
-    } else if(is.dates(index(y1))) {
+    } else if(is.dates(index(y_A))) {
       xlab <- "Dates"
     } else xlab <- " "
   } 
-  if(is.null(ylab)) ylab <- paste0(attr(y1,"longname"), 
-                                   "  (", attr(y1, "unit"), ")")
+  if(is.null(ylab)) ylab <- paste0(attr(y_A,"longname"), 
+                                   "  (", attr(y_A, "unit"), ")")
   if(is.null(main)) main <- " "
-  col1 <- "darkorange3"
-  col2 <- "blueviolet"
+  cols <- c("red", "royalblue","yellow")#c("darkorange", "blueviolet")
 
-  if(inherits(y1, "dsensemble")) {
-    mean_1 <- apply(y1, 1, mean)
-    min_1 <- apply(y1, 1, min)
-    max_1 <- apply(y1, 1, max)
-    q5_1 <- apply(y1, 1, q5)
-    q95_1 <- apply(y1, 1, q95)
+  if(inherits(y_A, "dsensemble")) {
+    mean_A <- apply(y_A, 1, mean)
+    min_A <- apply(y_A, 1, min)
+    max_A <- apply(y_A, 1, max)
+    q5_A <- apply(y_A, 1, q5)
+    q95_A <- apply(y_A, 1, q95)
   } else {
-    mean_1 <- y1
-    min_1 <- attr(Z, "min")
-    max_1 <- attr(Z, "max")
-    q5_1 <- rep(NULL, length(mean_1))
-    q95_1 <- rep(NULL, length(mean_1))
+    mean_A <- y_A
+    min_A <- attr(Z, "min")
+    max_A <- attr(Z, "max")
+    q5_A <- rep(NULL, length(mean_A))
+    q95_A <- rep(NULL, length(mean_A))
   }
   
-  if(inherits(y2, "dsensemble")) {
-    mean_2 <- apply(y2, 1, mean)
-    min_2 <- apply(y2, 1, min)
-    max_2 <- apply(y2, 1, max)
-    q5_2 <- apply(y2, 1, q5)
-    q95_2 <- apply(y2, 1, q95)
+  if(inherits(y_B, "dsensemble")) {
+    mean_B <- apply(y_B, 1, mean)
+    min_B <- apply(y_B, 1, min)
+    max_B <- apply(y_B, 1, max)
+    q5_B <- apply(y_B, 1, q5)
+    q95_B <- apply(y_B, 1, q95)
   } else {
-    mean_2 <- y2
-    min_2 <- subset(attr(y2, "min"), is=is, it=it)
-    max_2 <- subset(attr(y2, "max"), is=is, it=it)
-    q5_2 <- rep(NA, length(mean_2))
-    q95_2 <- rep(NA, length(mean_2))
+    mean_B <- y_B
+    min_B <- subset(attr(y_B, "min"), is=is, it=it)
+    max_B <- subset(attr(y_B, "max"), is=is, it=it)
+    q5_B <- rep(NA, length(mean_B))
+    q95_B <- rep(NA, length(mean_B))
   }
   
-  data <- data.frame(date = c(index(y1), index(y2)),
-                     ensemble = c(rep("A", length(mean_1)), 
-                                  rep("B", length(mean_2))),
-                     mean = c(mean_1, mean_2), 
-                     min = c(min_1, min_2), 
-                     max = c(max_1, max_2), 
-                     q5 = c(q5_1, q5_2), 
-                     q95 = c(q95_1, q95_2))
-  cols <- c("darkgreen", "orange")
-  p <- ggplot(data = data, aes(x = date, y = mean)) + 
-    geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
-    geom_line(aes(x = date, y = mean, color=ensemble), linewidth=1) + 
-    scale_color_manual(values = cols) +
-    scale_fill_manual(values = cols) + 
-    xlab(xlab) + ylab(ylab) + ggtitle(main) +
-    theme_minimal()
+  #data <- data.frame(date = c(index(y_A), index(y_B)),
+  #                   ensemble = c(rep("A", length(mean_A)), 
+  #                                rep("B", length(mean_B))),
+  #                   mean = c(mean_A, mean_B), 
+  #                   min = c(min_A, min_B), 
+  #                   max = c(max_A, max_B), 
+  #                   q5 = c(q5_A, q5_B), 
+  #                   q95 = c(q95_A, q95_B))
+  
+  d <- unique(index(y_A), index(y_B))
+  sm <- data.frame(matrix(NA, ncol=7, nrow=length(d)))
+  colnames(sm) <- c("date","mean_A","min_A","max_A",
+                    "mean_B","min_B","max_B")
+  i1 <- index(y_A) %in% d; i2 <- index(y_B) %in% d
+  sm[,1] <- d
+  sm[,2] <- smooth.spline(index(y_A), mean_A)$y[i1]
+  sm[,3] <- smooth.spline(index(y_A), min_A)$y[i1]
+  sm[,4] <- smooth.spline(index(y_A), max_A)$y[i1]
+  sm[,5] <- smooth.spline(index(y_B), mean_B)$y[i2]
+  sm[,6] <- smooth.spline(index(y_B), min_B)$y[i2]
+  sm[,7] <- smooth.spline(index(y_B), max_B)$y[i2]
+  plot_ly(x = sm$date, y = sm$mean_A, type = "scatter", 
+          mode = "lines", color = I(cols[1]), 
+          name="Ensemble A",
+          line=list(color=I(cols[1]), width=4)) %>%
+  add_ribbons(x=sm$date, ymin=sm$min_A, ymax=sm$max_A, 
+              name="min-max range", color=I(cols[1]),
+              line=list(color=I(cols[[1]]), opacity=0.4, width=0)) %>%
+  add_trace(x=sm$date, y=sm$mean_B, color=I(cols[2]), 
+            mode="lines", name="Ensemble B", 
+            line=list(color=I(cols[2]), width=4, dash="dash")) %>%
+  add_ribbons(p, x=sm$date, ymin=sm$min_B, ymax=sm$max_B, 
+              name="min-max range", 
+              color=I(cols[2]), 
+              line=list(color=I(cols[2]), opacity=0.4, width=0)) %>%
+  layout(title = main, plot_bgcolor = "white", xaxis = list(title = xlab), 
+         yaxis = list(title = ylab, range = ylim))
+  #
+  #p <- ggplot(data = data, aes(x = date, y = mean)) + 
+  #  geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
+  #  geom_line(aes(x = date, y = mean, color=ensemble), linewidth=1) + 
+  #  scale_color_manual(values = cols) +
+  #  scale_fill_manual(values = cols) + 
+  #  xlab(xlab) + ylab(ylab) + ggtitle(main) +
+  #  theme_minimal()
     
-  if(attr(y1, "unit")!=attr(y2, "unit")) {
-    if(is.null(ylab2)) ylab2 <- paste0(attr(y2, "longname")[1], 
-                                       "  (", attr(y2,"unit")[1], ")")
-    if(is.null(ylim2)) ylim2 <- diff(range(y2))/diff(range(y1))
-    p <- p + scale_y_continuous(
-      name = ylab, limits = ylim,
-      sec.axis = sec_axis(~.*ylim2, name=ylab2)) +
-      theme(axis.text.y.right =  element_text(color = cols[2]),
-            axis.title.y.right = element_text(color= cols[2])
-    )
-  }
-  
-  p
+  #if(attr(y_A, "unit")!=attr(y_B, "unit")) {
+  #  if(is.null(ylab2)) ylab2 <- paste0(attr(y_B, "longname")[1], 
+  #                                     "  (", attr(y_B,"unit")[1], ")")
+  #  if(is.null(ylim2)) ylim2 <- diff(range(y_B))/diff(range(y_A))
+  #  p <- p + scale_y_continuous(
+  #    name = ylab, limits = ylim,
+  #    sec.axis = sec_axis(~.*ylim2, name=ylab2)) +
+  #    theme(axis.text.y.right =  element_text(color = cols[2]),
+  #          axis.title.y.right = element_text(color= cols[2])
+  #  )
+  #}
+  #
+  #p
 
 }
