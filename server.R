@@ -2,6 +2,18 @@
 shinyServer(function(input, output, session) {
   #countview <- reactiveValues(i = 1)
 
+  output$Semi_collapsible_sidebar=renderMenu({
+    sidebarMenu(
+      menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
+      menuItem("Widgets", icon = icon("th"), tabName = "widgets",
+               badgeLabel = "new",
+               badgeColor = "green"),
+      menuItem("Charts", icon = icon("bar-chart-o"),
+               menuSubItem("Sub-item 1", tabName = "subitem1"),
+               menuSubItem("Sub-item 2", tabName = "subitem2")
+      ))
+  })
+    
   # Variable name - figure 1
   var1 <- reactive({ varname(input$var1, long=FALSE) })
 
@@ -46,6 +58,20 @@ shinyServer(function(input, output, session) {
       x <- "ESD"
     } else x <- input$src2
     return(x)
+  })
+  
+  ## Click on the map marker - this updates the selected station location
+  observeEvent(input$map_marker_click,{
+    print("observeEvent() - click")
+    Y <- locs[[region1()]][[var1()]]
+    event <- input$map_marker_click
+    selected <- which(Y$station_id==event$id)
+    print(event$id)
+    print(selected)
+    updateSelectInput(session, "location", label = "Location", 
+                      choices = Y$label, 
+                      selected = Y$label[[selected]])
+    print('---click---')
   })
 
   # Date range - figure 1
@@ -159,11 +185,11 @@ shinyServer(function(input, output, session) {
     choices1 <- locs[[region1()]][[var1()]]$label
     choices2 <- locs[[region2()]][[var2()]]$label
     choices <- choices1[choices1 %in% choices2]
-    if(input$location1!="-") {
-      if(input$location1 %in% choices) {
-        is <- which(input$location1==choices)
+    if(input$location!="-") {
+      if(input$location %in% choices) {
+        is <- which(input$location==choices)
       } else {
-        is <- grep(cleanstr(input$location1, "[0-9]"),
+        is <- grep(cleanstr(input$location, "[0-9]"),
                    cleanstr(choices, "[0-9]"))
         if(length(is)>1) {
           is <- is[[1]]
@@ -173,7 +199,7 @@ shinyServer(function(input, output, session) {
       }
       sel <- choices[is]
     }
-    updateSelectInput(session, "location1",
+    updateSelectInput(session, "location",
                       choices = choices, # update choices
                       selected = sel) # remove selection
   })
@@ -320,7 +346,7 @@ shinyServer(function(input, output, session) {
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange1, n=22)),
                show.robustness = input$robustness_map,
-               xlim=xlim1(), ylim=ylim1(),
+               xlim=xlim1(), ylim=ylim1(), cex=1.4,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[region1()]][[var1()]][[input$sce1]][[season1()]])
   })
@@ -334,46 +360,45 @@ shinyServer(function(input, output, session) {
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange2, n=22)),
                show.robustness = input$robustness_map,
-               xlim=xlim2(), ylim=ylim2(),
+               xlim=xlim2(), ylim=ylim2(), cex=1.4,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[region1()]][[var1()]][[input$sce2]][[season1()]])
   })
 
   ## Show time series of two data sets at a location
-  output$figts <- renderPlot({
+  output$figts <- renderPlotly({
     print('output$fig12')
     z <- zload_station()
     z2 <- zload_station_2()
-    stplot12(z, z2, is=input$location1, it=c(1950,2100),#it1(),
+    stplot12(z, z2, is=input$location, it=c(1950,2100),#it1(),
              im1=im1(), im2=im2(), ylim=input$tsrange1)
-  }, height=function(){0.6*session$clientData$output_figts_width})
+  })#, height=function(){0.6*session$clientData$output_figts_width})
 
 
-  ## Show location of selected station on map
-  output$mapts <- renderPlot({
-    print('output$fig12')
-    z <- zload_station()
-    stmap(z, is=input$location1, xlim=xlim1(), ylim=ylim1())
-  }, height=function(){1.1*session$clientData$output_mapts_width})
-
-  ## Location of selected station on map but leaflet
-  output$maptsf <- renderLeaflet({
+  zoom <- reactive({
+    2
+  })
+  
+  output$map <- renderLeaflet({
     Y <- locs[[region1()]][[var1()]]
-    selected <- which(Y$label==input$location1)
-    leaflet() %>%
-      addTiles() %>%  
-      addCircleMarkers(lng=Y$longitude, lat=Y$latitude, 
-                 popup=as.list(first2upper(Y$label)),
-                 label=as.list(first2upper(Y$label)),
-                 labelOptions = labelOptions(direction = "right", textsize = "12px", opacity = 0.6),
-                 radius = 3, stroke=TRUE, weight = 1, color='black',
-                 layerId = Y$stid, fillOpacity = 0.4, 
-                 fillColor="black") %>%
+    selected <- which(Y$label==input$location)
+    leaflet() %>% addTiles() %>%
+      addCircleMarkers(lng = Y$longitude, # longitude
+                       lat = Y$latitude, fill = TRUE, # latitude
+                       label = Y$location, 
+                       labelOptions = labelOptions(direction = "right",textsize = "12px",opacity=0.6),
+                       popup = Y$location, popupOptions(keepInView = TRUE),
+                       radius = 4, stroke=TRUE, weight = 1, color='black',
+                       layerId = Y$station_id,
+                       fillOpacity = 0.4) %>%
       addCircleMarkers(lng = Y$longitude[selected], lat = Y$latitude[selected], 
                        fill=TRUE, label=first2upper(Y$label[selected]),
-                       radius=6, stroke=TRUE, weight=3, color='red',
-                       layerId = Y$stid[selected], 
-                       fillOpacity = 0.5, fillColor = "red")
+                       radius=4, stroke=TRUE, weight=3, color='red',
+                       layerId = Y$station_id[selected], 
+                       fillOpacity = 1.0, fillColor = "red") %>%
+      setView( lng = mean(range(Y$longitude)), 
+               lat = mean(range(Y$latitude)),
+               zoom=zoom() )
   })
   
   ## Show map of gridded temperature
@@ -384,7 +409,7 @@ shinyServer(function(input, output, session) {
                FUN=input$fun1, FUNX="mean", MET=source1(),#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange1, n=22)),
-               show.robustness = input$robustness_map,
+               show.robustness = input$robustness_map, cex=1.4,
                xlim=xlim1(), ylim=ylim1(), verbose=FALSE,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[region1()]][[var1()]][[input$sce1]][[season1()]])
@@ -398,7 +423,7 @@ shinyServer(function(input, output, session) {
                FUN=input$fun2, FUNX="mean", MET=source2(),#input$funx1,
                #show.field=input$field, show.station=input$stations,
                colbar=list(breaks=pretty(input$valrange2, n=22)),
-               show.robustness = input$robustness_map,
+               show.robustness = input$robustness_map, cex=1.4,
                xlim=xlim2(), ylim=ylim2(), verbose=FALSE,
                threshold = 0.9,#input$threshold_map/100,
                trends=T4[[region2()]][[var2()]][[input$sce2]][[season2()]])
@@ -429,5 +454,5 @@ shinyServer(function(input, output, session) {
       dev.off()
     }
   )
-
+  
 })

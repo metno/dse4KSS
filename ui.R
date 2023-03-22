@@ -12,6 +12,7 @@ var0 <- "pr"
 sce0 <- "rcp85"
 seas0 <- "djf"
 
+
 header <- dashboardHeader(
   title = "The Nordic region climate atlas",
   titleWidth = '600px'
@@ -96,18 +97,6 @@ selectVar <- box(width = NULL, status="warning", title="Plot settings",
 selectA <- box(width = NULL, status="warning", title="Ensemble A",
                collapsible = TRUE, collapsed=FALSE,
                div(style = "font-size:12px",
-                   #selectInput("reg1",
-                   #            label = "Region",
-                   #            choices = unique(cats$region),
-                   #            selected = reg0),
-                   #selectInput("var1",
-                   #            label = "Variable",
-                   #            choices = as.vector(sapply(unique(cats$var), varname)),
-                   #            selected = varname(var0)),
-                   #selectInput("seas1",
-                   #            label = "Season",
-                   #            choices = as.vector(sapply(unique(cats$it), seasonname)),
-                   #            selected = seasonname(seas0)),
                    selectInput("src1",
                                label="Data source",
                                choices = c("ESD_Nordic", "ESD_Finland", "RCM", "GCM"),
@@ -147,16 +136,15 @@ selectB <- box(width=NULL, status="warning", title = "Ensemble B",
 
 timeseries <- box(width=NULL, title="Time series",
                   collapsible = TRUE, collapsed=FALSE,
-                  column(3,
-                         selectInput("location1",
+                  column(4,
+                         selectInput("location",
                                      label = "Location",
                                      choices = locs[[reg0]][[var0]]$label,
                                      selected = locs[[reg0]][[var0]]$label[[1]]),
-                         leafletOutput("maptsf",width="20vw")
-                         #plotOutput("mapts", width="100%", height="100%")
+                         leafletOutput("map", width="30vw")
                   ),
-                  column(9,
-                         plotOutput("figts", width = "100%", height = "50%")
+                  column(8,
+                         plotlyOutput("figts", width = "100%", height = "60%")
                   )
 )
 
@@ -211,6 +199,7 @@ maps <- box(width=NULL, title="Maps",
             )
 )
 
+
 advanced <- box(width=NULL, title="Advanced settings",
                 collapsible = TRUE, collapsed=TRUE,
                 column(6,
@@ -258,10 +247,13 @@ body <- dashboardBody(
 )
 
 
+sideboard <- dashboardSidebar(sidebarMenuOutput("Semi_collapsible_sidebar"))
+
 
 dashboardPage(
   header,
-  dashboardSidebar(disable = FALSE),
+  dashboardSidebar(disable = TRUE),
+  #sideboard,
   body
 )
 
