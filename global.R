@@ -5,6 +5,7 @@ library(shiny)
 library(shinydashboard)
 library(esd)
 library(ggplot2)
+library(plotly)
 
 source("rtools.R")
 source("calculate.trends.R")

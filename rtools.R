@@ -681,26 +681,36 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
                      max = c(max_1, max_2), 
                      q5 = c(q5_1, q5_2), 
                      q95 = c(q95_1, q95_2))
+  browser()
   cols <- c("darkgreen", "orange")
-  p <- ggplot(data = data, aes(x = date, y = mean)) + 
-    geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
-    geom_line(aes(x = date, y = mean, color=ensemble), linewidth=1) + 
-    scale_color_manual(values = cols) +
-    scale_fill_manual(values = cols) + 
-    xlab(xlab) + ylab(ylab) + ggtitle(main) +
-    theme_minimal()
-    
-  if(attr(y1, "unit")!=attr(y2, "unit")) {
-    if(is.null(ylab2)) ylab2 <- paste0(attr(y2, "longname")[1], 
-                                       "  (", attr(y2,"unit")[1], ")")
-    if(is.null(ylim2)) ylim2 <- diff(range(y2))/diff(range(y1))
-    p <- p + scale_y_continuous(
-      name = ylab, limits = ylim,
-      sec.axis = sec_axis(~.*ylim2, name=ylab2)) +
-      theme(axis.text.y.right =  element_text(color = cols[2]),
-            axis.title.y.right = element_text(color= cols[2])
-    )
-  }
+  #p <- ggplot(data = data, aes(x = date, y = mean)) + 
+  #  geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
+  #  geom_line(aes(x = date, y = mean, color=ensemble), linewidth=1) + 
+  #  scale_color_manual(values = cols) +
+  #  scale_fill_manual(values = cols) + 
+  #  xlab(xlab) + ylab(ylab) + ggtitle(main) +
+  #  theme_minimal()
+  sm1 <- data.frame(date=index(y1), mean=smooth.spline(index(y1), mean_1)$y,
+                    min=smooth.spline(index(y1), min_1)$y,
+                    max=smooth.spline(index(y1), max_1)$y)
+  sm2 <- data.frame(date=index(y2), mean=smooth.spline(index(y2), mean_2)$y,
+                    min=smooth.spline(index(y2), min_2)$y,
+                    max=smooth.spline(index(y2), max_2)$y)
+  pp <- plot_ly(data=sm1, x= ~date, y=~mean, type="scatter", linetype = 1, 
+                color=cols[1], spans=ylim)
+  pp <- add_lines(pp, data=sm2, x=~date, y=mean, color=cols[2])
+  pp <- 
+  #if(attr(y1, "unit")!=attr(y2, "unit")) {
+  #  if(is.null(ylab2)) ylab2 <- paste0(attr(y2, "longname")[1], 
+  #                                     "  (", attr(y2,"unit")[1], ")")
+  #  if(is.null(ylim2)) ylim2 <- diff(range(y2))/diff(range(y1))
+  #  p <- p + scale_y_continuous(
+  #    name = ylab, limits = ylim,
+  #    sec.axis = sec_axis(~.*ylim2, name=ylab2)) +
+  #    theme(axis.text.y.right =  element_text(color = cols[2]),
+  #          axis.title.y.right = element_text(color= cols[2])
+  #  )
+  #}
   
   p
 

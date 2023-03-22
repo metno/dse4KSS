@@ -261,7 +261,7 @@ body <- dashboardBody(
 
 dashboardPage(
   header,
-  dashboardSidebar(disable = TRUE),
+  dashboardSidebar(disable = FALSE),
   body
 )
 
