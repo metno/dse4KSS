@@ -4,6 +4,23 @@
 ## to minimise the needed data volume, and this app expand information embedded in the PCAs/EOFs to corresponding information
 ## in the form of station series or gridded maps.
 
+## Remove special characters from string
+cleanstr <- function(x, remove=NULL) {
+  y <- gsub("[[:punct:]]|\\s", "", x)
+  if(!is.null(remove)) y <- gsub(remove, "", y)
+  return(y)
+}
+
+## Capitalize the first letter in a word (or all words in a sentence if all=TRUE) 
+first2upper <- function(x, all=TRUE) {
+  up <- function(a) if(nchar(a)==1 | grepl("\\b[I|V|X|L|C|D|M]{1,20}\\b",a)) return(toupper(a)) else 
+    return(paste0(toupper(substr(a,1,1)), tolower(substr(a,2,nchar(a)))))
+  allup <- function(b) paste(sapply(unlist(strsplit(b," ")), up), collapse=" ")
+  if(all) y <- sapply(x, allup) else y <- sapply(x, up)
+  return(y)
+}
+
+## Long and short variable names
 varname <- function(x, long=TRUE) {
   if(long) {
     y <- switch(x, 
@@ -23,6 +40,7 @@ varname <- function(x, long=TRUE) {
   return(y)
 }
 
+## Long and short season names
 seasonname <- function(x, long=TRUE) {
   if(long)  {
     y <- switch(x, 
@@ -40,19 +58,28 @@ seasonname <- function(x, long=TRUE) {
   return(y)
 }
 
-
-## Remove special characters from string
-cleanstr <- function(x, remove=NULL) {
-  y <- gsub("[[:punct:]]|\\s", "", x)
-  if(!is.null(remove)) y <- gsub(remove, "", y)
-  return(y)
-}
-
-first2upper <- function(x) {
-  up <- function(a) if(nchar(a)==1 | grepl("\\b[I|V|X|L|C|D|M]{1,20}\\b",a)) return(toupper(a)) else 
-    return(paste0(toupper(substr(a,1,1)), tolower(substr(a,2,nchar(a)))))
-  allup <- function(b) paste(sapply(unlist(strsplit(b," ")), up), collapse=" ")
-  y <- sapply(x, allup)
+## Long and short emission scenario names
+scenarioname <- function(x, long=TRUE) {
+  y <- cleanstr(tolower(x))
+  if(grepl("ssp",y)) {
+    i <- regexpr("ssp", y)
+    n <- 5
+    y <- substr(y, i, i+n)
+  } else if(grepl("rcp",y)) {
+    i <- regexpr("rcp", y)
+    n <- 4
+    y <- substr(y, i, i+n)
+  }
+  if(long) y <- switch(y, 
+                "rcp26"="Low emission scenario (CMIP5 RCP2.6)",
+                "rcp45"="Medium emission scenario (CMIP5 RCP4.5)",
+                "rcp85"="High emission scenario (CMIP5 RCP8.5)",
+                "ssp119"="Very low emission scenario (CMIP6 SSP1 1.9)",
+                "ssp126"="Low emission scenario (CMIP6 SSP1 2.6)",
+                "ssp245"="Medium emission scenario (CMIP6 SSP2 4.5)",
+                "ssp370"="Medium-high emission scenario (CMIP6 SSP3 7.0)",
+                "ssp585"="High emission scenario (CMIP6 SSP5 8.5)",
+                x)
   return(y)
 }
 
@@ -121,37 +148,39 @@ xmembers <- function(X,im=NULL,length=NULL,verbose=FALSE) {
   return(x)
 }
 
-
-zload <- function(path="data", type="field", src="ESD",
-                  region="Nordic", param="t2m", season="djf",
-                  scenario="ssp585", FUNX="mean", FUN="mean", 
-                  verbose=FALSE) {
-  if(verbose) print("zload")
-  
-  if(src=="ESD") { 
-    pattern <- c("dse.kss", region)
-  } else if (src=="RCM") {
-    if(is.null(FUNX)) FUNX <- "mean"
-    pattern <- c("ens","EUR-11","remapbil",FUNX)
-    if(grepl("trend",FUN)) pattern <- c(pattern,FUN) 
+patterns <- function(param="t2m", src="ESD", scenario="rcp85", 
+                     season="djf", FUNX="mean", FUN=NULL)  {
+  if(grepl("esd|statistical",tolower(src))) {
+    pattern <- pattern.esd
+  } else if (grepl("rcm|dynamical",tolower(src))) {
+    pattern <- pattern.rcm
     if(param %in% c("fw","mu","precip")) param <- "pr"
     if(param %in% c("t2m","tsd")) param <- "tas"
-    path <- file.path(path,"rcm")
+    if(!is.null(FUNX)) pattern <- c(pattern, FUNX)
+    if(!is.null(FUN)) pattern <- c(pattern, FUN)
   }
   pattern <- c(pattern, param, scenario, season)
+  return(pattern)
+}
 
+
+zload <- function(path="data/esd", type="field", 
+                  src="ESD", param="t2m", season="djf", scenario="ssp585",
+                  FUNX="mean", FUN=NULL, verbose=FALSE) {
+  if(verbose) print("zload")
+  pattern <- patterns(src=src, param=param, season=season, scenario=scenario,
+                      FUNX=FUNX, FUN=FUN)
   files <- list.files(path, pattern=pattern[1], full.names=TRUE)
   i <- eval(parse(text=paste(paste0("grepl('",tolower(pattern),
                                     "', tolower(files))"), 
                              collapse=" & ")))
-  if(!grepl("trend",FUN)) {
-    if(sum(i)>1 & !any(grepl("trend",pattern))) i <- i & !grepl("trend",files)
-  } else if(any(grepl("trend",pattern))) {
+  if(any(grepl("trend",pattern))) {
     pattern_trend <- pattern[grepl("trend",pattern)]
     i <- i & grepl(paste0("_",tolower(pattern_trend),"_"), 
                    tolower(files))
+  } else {
+    if(sum(i)>1) i <- i & !grepl("trend",files)
   }
-  
   if(sum(i)==1) {
     if(grepl(".rda", files[i]) & grepl("dse", files[i])) {
       if(verbose) print(paste("load file",files[i]))
@@ -160,6 +189,8 @@ zload <- function(path="data", type="field", src="ESD",
       attr(Z, "season") <- season(Z$pca)
     } else if(grepl(".nc", files[i]) & grepl("ens", files[i])) {
       if(verbose) print(paste("Getting",param,"from",files[i]))
+      if(param %in% c("fw","mu","precip")) param <- "pr"
+      if(param %in% c("t2m","tsd")) param <- "tas"
       Z <- retrieve.rcm(files[i], param=param)
     }
     if('mu' %in% pattern) {
@@ -194,10 +225,7 @@ zload <- function(path="data", type="field", src="ESD",
       coredata(Z) <- cz*10 # trends per decade
       attr(Z, "unit") <- paste0(attr(Z, "unit"),"/decade")
       attr(Z, "variable") <- paste0(attr(Z, "variable")," trend")
-    } 
-    attr(Z, "season") <- season
-    attr(Z, "scenario") <- scenario
-    attr(Z, "param") <- param
+    }
     #if (FUNX == "sd") {
     #  cz <- coredata(Z)
     #  coredata(Z) <- sqrt(cz) # var to sd
@@ -290,7 +318,7 @@ mask.station <- function(x,land=FALSE) {
 mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
                        it=NULL, im=NULL, main=NULL, colbar=NULL,
                        show.field=TRUE, show.stations=FALSE, 
-                       oceanmask=TRUE,
+                       oceanmask=TRUE, 
                        pch=19, cex=1, lwd=1, xlim=NULL, ylim=NULL,
                        show.robustness=TRUE,trends=NULL,threshold=0.9,
                        new=FALSE, add=FALSE, fig=NULL,
@@ -446,8 +474,7 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
       slonlat <- slonlat[!duplicated(slonlat),]
       points(slonlat[,1], slonlat[,2], col='black', pch='.', cex=cex.robust)
     } else if(inherits(Z,"station")) {
-      sig <- zload(src="RCM", param=attr(Z,"param"), FUN="postrend",
-                   season=attr(Z,"season"), scenario=attr(Z,"scenario"))
+      sig <- trends
       s <- (sig>=threshold | sig <= (1-threshold)) & !is.na(m2)
       slonlat <- cbind(round(lon(sig)[s], decimals), 
                       round(lat(sig)[s], decimals))
@@ -588,6 +615,7 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
                      xlim=NULL, ylim=NULL, 
                      xlab=NULL, ylab=NULL, main=NULL,
                      ylim2=NULL, ylab2=NULL,
+                     label1=NULL, label2=NULL,
                      mar=c(2,2,2,1), mgp=c(2.5,1,0.5),
                      cex.axis=1, cex.lab=1.2, cex.main=1.2,
                      new=FALSE, add=FALSE, verbose=FALSE, ...) {
@@ -622,9 +650,13 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
       xlab <- "Dates"
     } else xlab <- " "
   } 
-  if(is.null(ylab)) ylab <- paste0(attr(y_A,"longname"), 
+  if(is.null(ylab)) ylab <- paste0(gsub("_"," ",attr(y_A,"longname")), 
                                    "  (", attr(y_A, "unit"), ")")
   if(is.null(main)) main <- " "
+  
+  if(is.null(label1)) label1 <- "Ensemble A"
+  if(is.null(label2)) label2 <- "Ensemble B"
+    
   cols <- c("red", "royalblue","yellow")#c("darkorange", "blueviolet")
 
   if(inherits(y_A, "dsensemble")) {
@@ -663,7 +695,6 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
   #                   max = c(max_A, max_B), 
   #                   q5 = c(q5_A, q5_B), 
   #                   q95 = c(q95_A, q95_B))
-  
   d <- unique(index(y_A), index(y_B))
   sm <- data.frame(matrix(NA, ncol=7, nrow=length(d)))
   colnames(sm) <- c("date","mean_A","min_A","max_A",
@@ -677,21 +708,22 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
   sm[,6] <- smooth.spline(index(y_B), min_B)$y[i2]
   sm[,7] <- smooth.spline(index(y_B), max_B)$y[i2]
   plot_ly(x = sm$date, y = sm$mean_A, type = "scatter", 
-          mode = "lines", color = I(cols[1]), 
-          name="Ensemble A",
+          mode = "lines", color = I(cols[1]), name=label1,
           line=list(color=I(cols[1]), width=4)) %>%
   add_ribbons(x=sm$date, ymin=sm$min_A, ymax=sm$max_A, 
-              name="min-max range", color=I(cols[1]),
+              name="min-max", color=I(cols[1]),
               line=list(color=I(cols[[1]]), opacity=0.4, width=0)) %>%
   add_trace(x=sm$date, y=sm$mean_B, color=I(cols[2]), 
-            mode="lines", name="Ensemble B", 
+            mode="lines", name=label2, 
             line=list(color=I(cols[2]), width=4, dash="dash")) %>%
   add_ribbons(p, x=sm$date, ymin=sm$min_B, ymax=sm$max_B, 
-              name="min-max range", 
+              name="min-max", 
               color=I(cols[2]), 
               line=list(color=I(cols[2]), opacity=0.4, width=0)) %>%
   layout(title = main, plot_bgcolor = "white", xaxis = list(title = xlab), 
-         yaxis = list(title = ylab, range = ylim))
+         yaxis = list(title = ylab, range = ylim),
+         legend = list(x=0, y=.95, traceorder="normal",
+                       font = list(family = "sans-serif", size=12, color="black")))
   #
   #p <- ggplot(data = data, aes(x = date, y = mean)) + 
   #  geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +

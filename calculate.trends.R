@@ -4,11 +4,16 @@
 source("rtools.R")
 
 ## This is the path to the downscaled ensemble data 
-path.data <- "data"
+path.esd <- "data/esd"
+pattern.esd <- "dse.kss.Nordic"
+
+## file name format: pattern.variable...scenario...season...rda
+## where pattern is defined above, scenario is e.g. rcp45 or ssp585,
+## and season is annual, djf, mam, jja or son
 
 ## New or updated files can be put elsewhere (not in path.data)
 ## and checked for errors before moving them into path.data
-path.out <- path.data
+path.out <- path.esd
 
 file.trends <- file.path(path.out, "trends.rda")
 if(file.exists(file.trends)) {
@@ -16,12 +21,12 @@ if(file.exists(file.trends)) {
 } else {
   trends <- list()
 }
-files.dse <- list.files(path=path.data, pattern="dse.kss")
+
+files.dse <- list.files(path=path.esd, pattern=pattern.esd)
 files.dse <- files.dse[grepl("djf|mam|jja|son|ann",files.dse) & 
                          grepl("rcp|ssp",files.dse)]
-regions <- unique(gsub("[[:punct:]].*.","",gsub("dse.kss.","",files.dse)))
 variables <- unique(gsub("[[:punct:]].*.","",
-                  gsub(paste0("dse.kss.",regions,".",collapse="|"), 
+                  gsub(paste0(pattern.esd,".",collapse="|"), 
                        "", files.dse)))
 scenarios <- unique(gsub("[[:punct:]].*.","",
                     substr(files.dse, regexpr("rcp|ssp", files.dse), 
@@ -29,25 +34,30 @@ scenarios <- unique(gsub("[[:punct:]].*.","",
 seasons <- unique(substr(files.dse, regexpr("djf|mam|jja|son|ann", files.dse), 
                          regexpr("djf|mam|jja|son|ann", files.dse) + 2))
 Z <- NULL
-for(region in regions) {
-  print(region)
+#for(region in regions) {
+#  print(region)
   for(param in variables) {#[grepl("t2m|pr|fw",variables)]) {
     print(param)
     for(rcp in scenarios) {
       print(rcp)
       for(season in seasons) {
         print(season)
-        i.select <- grepl(paste0(".*",region,".*",param,".*",rcp,".*",season,".*"),
+        #i.select <- grepl(paste0(".*",region,".*",param,".*",rcp,".*",season,".*"),
+        #                  files.dse)
+        i.select <- grepl(paste0(".*",param,".*",rcp,".*",season,".*"),
                           files.dse)
         if(any(i.select)) {
           print('Calculating ensemble statistics of trends')
-          if(is.null(trends[[region]][[param]][[rcp]][[season]])) {
-            Z <- try(zload(path.data, pattern=c("dse.kss",region,param,rcp,season)))
-            if(inherits(Z, "try-error")) {
+          #if(is.null(trends[[region]][[param]][[rcp]][[season]])) {
+          if(is.null(trends[[param]][[rcp]][[season]])) {
+            Z <- try(zload(path.esd, pattern=c(pattern.esd,param,rcp,season)))
+            if(inherits(Z, c("try-error","NULL"))) {
               print(paste("Could not load dse.kss",
-                        region, param, rcp, season, sep="."))
-            } else if(!is.null(Z)) {
-              trends[[region]][[param]][[rcp]][[season]] <- trend.dsensemble(Z)
+                        #region, 
+                        param, rcp, season, sep="."))
+            } else if(inherits(Z, "dsensemble")) {
+              #trends[[region]][[param]][[rcp]][[season]] <- trend.dsensemble(Z)
+              trends[[param]][[rcp]][[season]] <- trend.dsensemble(Z)
               save(file=file.trends, trends)
               Z <- NULL
             }
@@ -56,7 +66,7 @@ for(region in regions) {
       }
     }
   }
-}
+#}
 
 # show.plots <- FALSE
 # if(show.plots) {

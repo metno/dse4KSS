@@ -6,12 +6,9 @@ library(shiny)
 library(shinydashboard)
 library(leaflet)
 
-## Initial choice of region, variable etc
-reg0 <- "Nordic"
-var0 <- "pr"
-sce0 <- "rcp85"
-seas0 <- "djf"
 
+sourcelist <- c("Empirical statistical downscaling (MetNo ESD)", 
+                "Dynamical downscaling (CORDEX RCM)")#c("ESD_Nordic", "ESD_Finland", "RCM", "GCM")
 
 header <- dashboardHeader(
   title = "The Nordic region climate atlas",
@@ -19,129 +16,16 @@ header <- dashboardHeader(
 )
 
 
-gcmbox1 <- box(
-  title = HTML("<font size=-0.5 color='black'><i>Model selection</i></font>"),
-  width = '100%' ,
-  status = 'primary',
-  collapsible = TRUE,
-  collapsed = TRUE,
-  div(style = "font-size:12px",
-      actionButton("gcmall1",
-                   label = "All simulations",
-                   width = '150px'
-      ),
-      actionButton("gcmone1",
-                   label = "One of each GCM",
-                   width = '150px'
-      ),
-      actionButton("gcmdeselect1",
-                   label = "Deselect all",
-                   width = '150px'
-      ),
-      br(),
-      br(),
-      checkboxGroupInput("gcms1",
-                         label = "Climate models",
-                         choices = gcmnames[[var0]][[sce0]],
-                         selected = gcmnames[[var0]][[sce0]],
-                         inline=TRUE,
-                         width='100%'
-      )
-  )
-)
-
-gcmbox2 <- box(
-  title = HTML("<font size=-0.5 color='black'><i>Model selection</i></font>"),
-  width = '100%' ,
-  status = 'primary',
-  collapsible = TRUE,
-  collapsed = TRUE,
-  div(style = "font-size:12px",
-      actionButton("gcmall2",
-                   label = "All simulations",
-                   width = '150px'
-      ),
-      actionButton("gcmone2",
-                   label = "One of each GCM",
-                   width = '150px'
-      ),
-      actionButton("gcmdeselect2",
-                   label = "Deselect all",
-                   width = '150px'
-      ),
-      br(),
-      br(),
-      checkboxGroupInput("gcms2",
-                         label = "Climate models",
-                         choices = gcmnames[[var0]][[sce0]],
-                         selected = gcmnames[[var0]][[sce0]],
-                         inline=TRUE,
-                         width='100%')
-  )
-)
-
-selectVar <- box(width = NULL, status="warning", title="Plot settings",
-                 collapsible = TRUE, collapsed=FALSE,
-                 div(style = "font-size:12px",
-                     selectInput("var1",
-                                 label = "Variable",
-                                 choices = as.vector(sapply(unique(cats$var), varname)),
-                                 selected = varname(var0)),
-                     selectInput("seas1",
-                                 label = "Season",
-                                 choices = as.vector(sapply(unique(cats$it), seasonname)),
-                                 selected = seasonname(seas0))
-                 )
-)
-
-selectA <- box(width = NULL, status="warning", title="Ensemble A",
-               collapsible = TRUE, collapsed=FALSE,
-               div(style = "font-size:12px",
-                   selectInput("src1",
-                               label="Data source",
-                               choices = c("ESD_Nordic", "ESD_Finland", "RCM", "GCM"),
-                               selected = "ESD_Nordic"),
-                   selectInput("sce1",
-                               label = "Scenario",
-                               choices = unique(cats$sce),
-                               selected = sce0),
-                   gcmbox1)
-)
-
-selectB <- box(width=NULL, status="warning", title = "Ensemble B",
-               collapsible = TRUE, collapsed=FALSE,
-               div(style = "font-size:12px",
-                   #selectInput("reg2",
-                   #            label = "Region",
-                   #            choices = unique(cats$region),
-                   #            selected = reg0),
-                   #selectInput("var2",
-                   #            label = "Variable",
-                   #            choices = as.vector(sapply(unique(cats$var), varname)),
-                   #            selected = varname(var0)),
-                   #selectInput("seas2",
-                   #            label = "Season",
-                   #            choices = as.vector(sapply(unique(cats$it), seasonname)),
-                   #            selected = seasonname(seas0)),
-                   selectInput("src2",
-                               label="Data source",
-                               choices = c("ESD_Nordic", "ESD_Finland", "RCM", "GCM"),
-                               selected = "RCM"),
-                   selectInput("sce2",
-                               label = "Scenario",
-                               choices = unique(cats$sce),
-                               selected = sce0),
-                   gcmbox2)
-)
-
 timeseries <- box(width=NULL, title="Time series",
                   collapsible = TRUE, collapsed=FALSE,
                   column(4,
-                         selectInput("location",
-                                     label = "Location",
-                                     choices = locs[[reg0]][[var0]]$label,
-                                     selected = locs[[reg0]][[var0]]$label[[1]]),
-                         leafletOutput("map", width="30vw")
+                         leafletOutput("map"),#, width="20vw"),
+                         absolutePanel(bottom = 30, left = 20, draggable=TRUE,
+                         selectInput("location", width = "120px",
+                                       label = "Location",
+                                       choices = locs[[var0]]$label,#locs[[reg0]][[var0]]$label,
+                                       selected = locs[[var0]]$label[[1]])#locs[[reg0]][[var0]]$label[[1]])
+                         )
                   ),
                   column(8,
                          plotlyOutput("figts", width = "100%", height = "60%")
@@ -158,11 +42,11 @@ maps <- box(width=NULL, title="Maps",
                    selectInput("fun1",
                                label = "Time aggregation",
                                choices=c('mean','trend','max','min','sd'),
-                               selected='mean'),
+                               selected='trend'),
                    selectInput("dates1",
                                label="Years",
                                choices=names(datelist),
-                               selected=names(datelist)[[2]]),
+                               selected=names(datelist)[[1]]),
                    br(),
                    br(),
                    htmlOutput("main1"),
@@ -181,11 +65,11 @@ maps <- box(width=NULL, title="Maps",
                    selectInput("fun2",
                                label = "Time aggregation",
                                choices=c('mean','trend','max','min','sd'),
-                               selected='mean'),
+                               selected='trend'),
                    selectInput("dates2",
                                label="Years",
                                choices=names(datelist),
-                               selected=names(datelist)[[length(datelist)]]),
+                               selected=names(datelist)[[1]]),
                    br(),
                    br(),
                    htmlOutput("main2"),
@@ -221,17 +105,6 @@ advanced <- box(width=NULL, title="Advanced settings",
 
 body <- dashboardBody(
   fluidRow(
-    column(4,
-           selectVar
-    ),
-    column(4,
-           selectA
-    ),
-    column(4,
-           selectB    
-    )
-  ),
-  fluidRow(
     column(12,
            timeseries
     )
@@ -246,14 +119,94 @@ body <- dashboardBody(
   )
 )
 
+sideboard <- dashboardSidebar(
+  sidebarMenu(
+    menuItem("\n Season and variable", tabName = "dashboard", 
+             icon = icon("cloud"), tabname="settings",
+             selectInput("var1",
+                         label = "Variable",
+                         choices = as.vector(sapply(unique(cats$var), varname)),
+                         selected = varname(var0)),
+             selectInput("seas1",
+                         label = "Season",
+                         choices = as.vector(sapply(unique(cats$it), seasonname)),
+                         selected = seasonname(seas0))
+    ),
+    menuItem(" Ensemble A", icon = icon("list"), tabName = "A", startExpanded = FALSE,
+             br(),
+             selectInput("src1",
+                         label="Data source",
+                         choices = sourcelist,
+                         selected = sourcelist[[1]]),
+             selectInput("sce1",
+                         label = "Scenario",
+                         choices = scenarios,
+                         selected = scenarioname(sce0)),
+             br(),
+             actionButton("gcmall1",
+                          label = "All simulations",
+                          width = '150px'
+             ),
+             actionButton("gcmone1",
+                          label = "One of each GCM",
+                          width = '150px'
+             ),
+             actionButton("gcmdeselect1",
+                          label = "Deselect all",
+                          width = '150px'
+             ),
+             br(),
+             checkboxGroupInput("gcms1",
+                                label = "Climate models",
+                                choices = gcmnames[[var0]][[sce0]],
+                                selected = gcmnames[[var0]][[sce0]],
+                                inline=TRUE,
+                                width='100%'
+             )
+    ),
+    menuItem("\n Ensemble B", icon = icon("list"), tabname="B", startExpanded = FALSE,
+             br(),
+             selectInput("src2",
+                         label="Data source",
+                         choices = sourcelist,
+                         selected = sourcelist[[2]]),
+             selectInput("sce2",
+                         label = "Scenario",
+                         choices = scenarios,
+                         selected = scenarioname(sce0)),
+             br(),
+             actionButton("gcmall2",
+                          label = "All simulations",
+                          width = '150px'
+             ),
+             actionButton("gcmone2",
+                          label = "One of each GCM",
+                          width = '150px'
+             ),
+             actionButton("gcmdeselect2",
+                          label = "Deselect all",
+                          width = '150px'
+             ),
+             br(),
+             checkboxGroupInput("gcms2",
+                                label = "Climate models",
+                                choices = gcmnames[[var0]][[sce0]],
+                                selected = gcmnames[[var0]][[sce0]],
+                                inline=TRUE,
+                                width='100%')
+    ),
+    menuItem(" Plot settings", icon = icon("gear"),
+             menuSubItem("Sub-item 1", tabName = "subitem1"),
+             menuSubItem("Sub-item 2", tabName = "subitem2"))
+    
+  )
+)
 
-sideboard <- dashboardSidebar(sidebarMenuOutput("Semi_collapsible_sidebar"))
 
 
 dashboardPage(
   header,
-  dashboardSidebar(disable = TRUE),
-  #sideboard,
+  sideboard,
   body
 )
 
