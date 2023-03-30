@@ -24,9 +24,12 @@ pattern.rcm <- c("ens","EUR-11","remapbil")
 
 datelist <- list("1951-2100" = c(1951,2100),
                  "1951-1980" = c(1951,1980),
-                 "1981-2010" = c(1981,2010),
-                 "2031-2060" = c(2031,2060),
+                 "1990-2020" = c(1981,2010),
+                 "2031-2060" = c(2041,2070),
                  "2071-2100" = c(2071,2100))
+
+sourcelist <- c("empirical statistical downscaling (MetNo ESD)", 
+                "dynamical downscaling (CORDEX RCM)")#c("ESD_Nordic", "ESD_Finland", "RCM", "GCM")
 
 ## Meta data from RCM files 
 files.rcm <- list.files(path.rcm, pattern=c(pattern.rcm))
@@ -157,7 +160,6 @@ scenarios <- as.vector(sapply(scenarios, scenarioname))
 #scenarios <- paste(toupper(scenarios),
 #                   c("(CMIP5)","(CMIP6)")[as.numeric(grepl("SSP", scenarios))+1])
 #names(scenarios) <- unique(sces)
-
 
 
 

@@ -12,9 +12,14 @@ cleanstr <- function(x, remove=NULL) {
 }
 
 ## Capitalize the first letter in a word (or all words in a sentence if all=TRUE) 
-first2upper <- function(x, all=TRUE) {
-  up <- function(a) if(nchar(a)==1 | grepl("\\b[I|V|X|L|C|D|M]{1,20}\\b",a)) return(toupper(a)) else 
-    return(paste0(toupper(substr(a,1,1)), tolower(substr(a,2,nchar(a)))))
+first2upper <- function(x, lower=TRUE, all=TRUE) {
+  if(lower) {
+    up <- function(a) if(nchar(a)==1 | grepl("\\b[I|V|X|L|C|D|M]{1,20}\\b",a)) return(toupper(a)) else 
+                          return(paste0(toupper(substr(a,1,1)), tolower(substr(a,2,nchar(a)))))
+  } else {
+    up <- function(a) if(nchar(a)==1 | grepl("\\b[I|V|X|L|C|D|M]{1,20}\\b",a)) return(toupper(a)) else 
+                          return(paste0(toupper(substr(a,1,1)), substr(a,2,nchar(a))))
+  }
   allup <- function(b) paste(sapply(unlist(strsplit(b," ")), up), collapse=" ")
   if(all) y <- sapply(x, allup) else y <- sapply(x, up)
   return(y)
@@ -42,19 +47,17 @@ varname <- function(x, long=TRUE) {
 
 ## Long and short season names
 seasonname <- function(x, long=TRUE) {
-  if(long)  {
-    y <- switch(x, 
-                "djf" = "winter",
-                "mam" = "spring",
-                "jja" = "summer",
-                "son" = "fall", x)
-  } else {
-    y <- switch(x, 
-                "winter" = "djf",
-                "spring" = "mam",
-                "summer" = "jja",
-                "fall" = "son", x)
-  }
+  if(grepl("winter|djf",tolower(x))) {
+    y <- switch(as.numeric(long)+1, "1"="djf", "2"="winter (Dec - Feb)")
+  } else if(grepl("spring|mam",tolower(x))) {
+    y <- switch(as.numeric(long)+1, "1"="mam", "2"="spring (Mar - may)")
+  } else if(grepl("summer|jja",tolower(x))) {
+    y <- switch(as.numeric(long)+1, "1"="jja", "2"="summer (Jun - Aug)")
+  } else if(grepl("fall|autumn|son",tolower(x))) {
+    y <- switch(as.numeric(long)+1, "1"="son", "2"="fall (Sep - Nov)")
+  } else if(grepl("annual|all|",tolower(x))) {
+    y <- "annual"
+  } else y <- NULL
   return(y)
 }
 
@@ -71,14 +74,14 @@ scenarioname <- function(x, long=TRUE) {
     y <- substr(y, i, i+n)
   }
   if(long) y <- switch(y, 
-                "rcp26"="Low emission scenario (CMIP5 RCP2.6)",
-                "rcp45"="Medium emission scenario (CMIP5 RCP4.5)",
-                "rcp85"="High emission scenario (CMIP5 RCP8.5)",
-                "ssp119"="Very low emission scenario (CMIP6 SSP1 1.9)",
-                "ssp126"="Low emission scenario (CMIP6 SSP1 2.6)",
-                "ssp245"="Medium emission scenario (CMIP6 SSP2 4.5)",
-                "ssp370"="Medium-high emission scenario (CMIP6 SSP3 7.0)",
-                "ssp585"="High emission scenario (CMIP6 SSP5 8.5)",
+                "rcp26"="low emission scenario (RCP2.6)",
+                "rcp45"="medium emission scenario (RCP4.5)",
+                "rcp85"="high emission scenario (RCP8.5)",
+                "ssp119"="very low emission scenario (SSP1 1.9)",
+                "ssp126"="low emission scenario (SSP1 2.6)",
+                "ssp245"="medium emission scenario (SSP2 4.5)",
+                "ssp370"="medium-high emission scenario (SSP3 7.0)",
+                "ssp585"="high emission scenario (SSP5 8.5)",
                 x)
   return(y)
 }
