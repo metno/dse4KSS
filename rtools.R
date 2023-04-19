@@ -152,7 +152,9 @@ xmembers <- function(X,im=NULL,length=NULL,verbose=FALSE) {
 }
 
 patterns <- function(param="t2m", src="ESD", scenario="rcp85", 
-                     season="djf", FUNX="mean", FUN=NULL)  {
+                     season="djf", FUNX="mean", FUN=NULL,
+                     pattern.esd="dse.kss.Nordic",
+                     pattern.rcm=c("ens","EUR-11","remapbil"))  {
   if(grepl("esd|statistical",tolower(src))) {
     pattern <- pattern.esd
   } else if (grepl("rcm|dynamical",tolower(src))) {
@@ -169,10 +171,14 @@ patterns <- function(param="t2m", src="ESD", scenario="rcp85",
 
 zload <- function(path="data/esd", type="field", 
                   src="ESD", param="t2m", season="djf", scenario="ssp585",
-                  FUNX="mean", FUN=NULL, verbose=FALSE) {
+                  FUNX="mean", FUN=NULL, 
+                  pattern.esd="dse.kss.Nordic",
+                  pattern.rcm=c("ens","EUR-11","remapbil"),
+                  verbose=FALSE) {
   if(verbose) print("zload")
   pattern <- patterns(src=src, param=param, season=season, scenario=scenario,
-                      FUNX=FUNX, FUN=FUN)
+                      FUNX=FUNX, FUN=FUN, pattern.esd=pattern.esd,
+                      pattern.rcm=pattern.rcm)
   files <- list.files(path, pattern=pattern[1], full.names=TRUE)
   i <- eval(parse(text=paste(paste0("grepl('",tolower(pattern),
                                     "', tolower(files))"), 
@@ -439,8 +445,18 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     #cb <- colbar.ini(m2,FUN=NULL,colbar=colbar,verbose=verbose)
     icol <- apply(as.matrix(m2),2,findInterval,cb$breaks)
     col <- cb$col[icol]
-    points(lon(m2), lat(m2), pch = pch,
-           bg=cb$col[icol], col=col, cex=cex)
+    #prmean <- map(precip.NORDKLIM, FUN="mean")
+    xyz <- cbind(as.vector(lon(m2)), 
+                 as.vector(lat(m2)), 
+                 as.vector(m2))
+    colnames(xyz) <- c('X', 'Y', 'Z')
+    e <- extent(xyz[,1:2])
+    r <- raster(e, ncol=160, nrow=160)
+    m2r <- rasterize(xyz[, 1:2], r, xyz[,3], fun=mean)
+    image(m2r, xlab="", ylab="", add=TRUE,
+          col=cb$col, breaks=cb$breaks, xlim=xlim, ylim=ylim)
+    #points(lon(m2), lat(m2), pch = pch,
+    #       bg=cb$col[icol], col=col, cex=cex)
   }
   
   varnm <- attr(m,"variable")
@@ -488,131 +504,131 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
 }
 
 
-## Plot individual station
-stplot <- function(z, is=NULL, it=NULL, im=NULL, main=NULL, 
-                   MET="ESD", ylim=NULL, verbose=FALSE) {
-  if(verbose) print('--- Plot individual station ---')
-  if(!inherits(z, "station")) z <- as.station(z)
-  if(is.null(is)) {
-    is <- 1
-  } else {
-    is <- grep(cleanstr(is, "[A-Z]"), stid(z))
-    if(length(is)==0) is <- 1
-  }
-  
-  if(is.null(it)) {
-    it <- c(1950, 2100)
-  } else {
-    it <- range(as.numeric(it))
-  }
-  y <- subset(z, is=is, it=it, im=im)
-  if(MET=="ESD") {
-    plot(y, target.show=FALSE, legend.show=FALSE, new=FALSE, #main=main,
-       xrange=range(attr(z, "longitude"))+c(-5,5), ylim=ylim,
-       yrange=range(attr(z, "latitude"))+c(-2,2), map.show=TRUE,
-       mar=c(3,5,4,4))
-  } else if(MET=="RCM"){
-    param <- attr(y,"variable")[1]
-    season <- toupper(attr(z, "season"))[1]
-    scenario <- tolower(attr(y, "scenario"))     
-    
-    lonst <- abs(attr(y, "longitude"))
-    latst <- abs(attr(y, "latitude"))
-    
-    paramfn <- varname(param,long=FALSE)
-    if (param == "precip") paramfn <- "pr"
-    
-    if(paramfn %in% c("fw","mu")) paramfn <- "pr"
-    if(paramfn %in% c("t2m","tsd")) paramfn <- "tas"
-    
-    years <- 1950:2100
-    tidx <- which(years %in% it)
-    yr <- years[years>=min(it) & years<=max(it)]
-    
-    data.dir <- "data/rcm/" #link to /lustre/storeB/users/andreasd/KiN_2023_data/ESDandRCM4KSS/Nordic/rcm
-    ## Mean value
-    filename <- paste0("ensmean_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
-    ncfile <- paste0(data.dir,filename)
-    if(verbose) print(paste("Getting",paramfn,"from",ncfile))
-    
-    nc <- nc_open(ncfile)
-    lonrcm <- ncvar_get(nc,"lon")
-    latrcm <- ncvar_get(nc,"lat")
-    
-    #Calculate the distance to the point for every grid box
-    dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
-    #find the indices with the minimum distance
-    idx <- which(dist==min(dist),arr.ind=T)
-    
-    rcm <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
-    nc_close(nc)
-    
-    ## Max value
-    filename <- paste0("ensmax_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
-    ncfile <- paste0(data.dir,filename)
-    if(verbose) print(paste("Getting",paramfn,"from",ncfile))
-    
-    nc <- nc_open(ncfile)
-    lonrcm <- ncvar_get(nc,"lon")
-    latrcm <- ncvar_get(nc,"lat")
-    
-    #Calculate the distance to the point for every grid box
-    dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
-    #find the indices with the minimum distance
-    idx <- which(dist==min(dist),arr.ind=T)
-    
-    rcm.max <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
-    nc_close(nc)
-    
-    ## Max value
-    filename <- paste0("ensmin_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
-    ncfile <- paste0(data.dir,filename)
-    if(verbose) print(paste("Getting",paramfn,"from",ncfile))
-    
-    nc <- nc_open(ncfile)
-    lonrcm <- ncvar_get(nc,"lon")
-    latrcm <- ncvar_get(nc,"lat")
-    
-    #Calculate the distance to the point for every grid box
-    dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
-    #find the indices with the minimum distance
-    idx <- which(dist==min(dist),arr.ind=T)
-    
-    rcm.min <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
-    nc_close(nc)
-    
-    if (paramfn == "pr") {
-      rcm <- rcm*3600*24 # mm/s to mm/day
-      rcm.max <- rcm.max*3600*24 # mm/s to mm/day
-      rcm.min <- rcm.min*3600*24 # mm/s to mm/day
-      unit <- "mm/day"
-    }
-    if (param == "t2m") {
-      rcm <- rcm-273.15 #K to °C
-      rcm.max <- rcm.max-273.15 #K to °C
-      rcm.min <- rcm.min-273.15 #K to °C
-      unit <- "deg*C"
-    }
-    if (param %in% c("tsd","fw","mu")) {
-      rcm <- rcm*NA # not yet available
-      rcm.max <- rcm.max*NA # not yet available
-      rcm.min <- rcm.min*NA # not yet available
-      unit <- NA
-    }
+# ## Plot individual station
+# stplot <- function(z, is=NULL, it=NULL, im=NULL, main=NULL, 
+#                    MET="ESD", ylim=NULL, verbose=FALSE) {
+#   if(verbose) print('--- Plot individual station ---')
+#   if(!inherits(z, "station")) z <- as.station(z)
+#   if(is.null(is)) {
+#     is <- 1
+#   } else {
+#     is <- grep(cleanstr(is, "[A-Z]"), stid(z))
+#     if(length(is)==0) is <- 1
+#   }
+#   
+#   if(is.null(it)) {
+#     it <- c(1950, 2100)
+#   } else {
+#     it <- range(as.numeric(it))
+#   }
+#   y <- subset(z, is=is, it=it, im=im)
+#   if(MET=="ESD") {
+#     plot(y, target.show=FALSE, legend.show=FALSE, new=FALSE, #main=main,
+#        xrange=range(attr(z, "longitude"))+c(-5,5), ylim=ylim,
+#        yrange=range(attr(z, "latitude"))+c(-2,2), map.show=TRUE,
+#        mar=c(3,5,4,4))
+#   } else if(MET=="RCM"){
+#     param <- attr(y,"variable")[1]
+#     season <- toupper(attr(z, "season"))[1]
+#     scenario <- tolower(attr(y, "scenario"))     
+#     
+#     lonst <- abs(attr(y, "longitude"))
+#     latst <- abs(attr(y, "latitude"))
+#     
+#     paramfn <- varname(param,long=FALSE)
+#     if (param == "precip") paramfn <- "pr"
+#     
+#     if(paramfn %in% c("fw","mu")) paramfn <- "pr"
+#     if(paramfn %in% c("t2m","tsd")) paramfn <- "tas"
+#     
+#     years <- 1950:2100
+#     tidx <- which(years %in% it)
+#     yr <- years[years>=min(it) & years<=max(it)]
+#     
+#     data.dir <- "data/rcm/" #link to /lustre/storeB/users/andreasd/KiN_2023_data/ESDandRCM4KSS/Nordic/rcm
+#     ## Mean value
+#     filename <- paste0("ensmean_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+#     ncfile <- paste0(data.dir,filename)
+#     if(verbose) print(paste("Getting",paramfn,"from",ncfile))
+#     
+#     nc <- nc_open(ncfile)
+#     lonrcm <- ncvar_get(nc,"lon")
+#     latrcm <- ncvar_get(nc,"lat")
+#     
+#     #Calculate the distance to the point for every grid box
+#     dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
+#     #find the indices with the minimum distance
+#     idx <- which(dist==min(dist),arr.ind=T)
+#     
+#     rcm <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
+#     nc_close(nc)
+#     
+#     ## Max value
+#     filename <- paste0("ensmax_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+#     ncfile <- paste0(data.dir,filename)
+#     if(verbose) print(paste("Getting",paramfn,"from",ncfile))
+#     
+#     nc <- nc_open(ncfile)
+#     lonrcm <- ncvar_get(nc,"lon")
+#     latrcm <- ncvar_get(nc,"lat")
+#     
+#     #Calculate the distance to the point for every grid box
+#     dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
+#     #find the indices with the minimum distance
+#     idx <- which(dist==min(dist),arr.ind=T)
+#     
+#     rcm.max <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
+#     nc_close(nc)
+#     
+#     ## Max value
+#     filename <- paste0("ensmin_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
+#     ncfile <- paste0(data.dir,filename)
+#     if(verbose) print(paste("Getting",paramfn,"from",ncfile))
+#     
+#     nc <- nc_open(ncfile)
+#     lonrcm <- ncvar_get(nc,"lon")
+#     latrcm <- ncvar_get(nc,"lat")
+#     
+#     #Calculate the distance to the point for every grid box
+#     dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
+#     #find the indices with the minimum distance
+#     idx <- which(dist==min(dist),arr.ind=T)
+#     
+#     rcm.min <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
+#     nc_close(nc)
+#     
+#     if (paramfn == "pr") {
+#       rcm <- rcm*3600*24 # mm/s to mm/day
+#       rcm.max <- rcm.max*3600*24 # mm/s to mm/day
+#       rcm.min <- rcm.min*3600*24 # mm/s to mm/day
+#       unit <- "mm/day"
+#     }
+#     if (param == "t2m") {
+#       rcm <- rcm-273.15 #K to °C
+#       rcm.max <- rcm.max-273.15 #K to °C
+#       rcm.min <- rcm.min-273.15 #K to °C
+#       unit <- "deg*C"
+#     }
+#     if (param %in% c("tsd","fw","mu")) {
+#       rcm <- rcm*NA # not yet available
+#       rcm.max <- rcm.max*NA # not yet available
+#       rcm.min <- rcm.min*NA # not yet available
+#       unit <- NA
+#     }
+# 
+#     rcm <- as.station(as.zoo(rcm, order.by=yr), param = param, unit = unit)
+#     rcm.max <- as.station(as.zoo(rcm.max, order.by=yr), param = param, unit = unit)
+#     rcm.min <- as.station(as.zoo(rcm.min, order.by=yr), param = param, unit = unit)
+#     plot(rcm, new=FALSE, ylim=ylim, mar=c(3,5,4,4),type="l",col="navy",main=loc(y))
+#     grid()
+#     lines(rcm.max, col="black", lty=2)
+#     lines(rcm.min, col="black", lty=2)
+#   }
+#   
+# }
 
-    rcm <- as.station(as.zoo(rcm, order.by=yr), param = param, unit = unit)
-    rcm.max <- as.station(as.zoo(rcm.max, order.by=yr), param = param, unit = unit)
-    rcm.min <- as.station(as.zoo(rcm.min, order.by=yr), param = param, unit = unit)
-    plot(rcm, new=FALSE, ylim=ylim, mar=c(3,5,4,4),type="l",col="navy",main=loc(y))
-    grid()
-    lines(rcm.max, col="black", lty=2)
-    lines(rcm.min, col="black", lty=2)
-  }
-  
-}
 
-
-stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
+stplot <- function(z1, z2, im1=NULL, im2=NULL,
                      #MET1="ESD", MET2="ESD", 
                      is=NULL, it=NULL, 
                      xlim=NULL, ylim=NULL, 
@@ -625,10 +641,11 @@ stplot12 <- function(z1, z2, im1=NULL, im2=NULL,
   if(verbose) print('--- Plot individual station ---')
   if(!inherits(z1, "station")) z1 <- as.station(z1)
   if(!inherits(z2, "station")) z2 <- as.station(z2)
+  
   if(is.null(is)) {
     is <- 1
   } else {
-    is <- grep(cleanstr(is, "[A-Z]"), stid(z1))
+    is <- grep(cleanstr(tolower(is), "[a-z]"), stid(z1))
     if(length(is)==0) is <- 1
   }
   

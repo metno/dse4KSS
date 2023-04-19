@@ -2,6 +2,9 @@
 shinyServer(function(input, output, session) {
   #countview <- reactiveValues(i = 1)
 
+  # Location
+  location <- reactive({ input$location })
+  
   # Variable name - ensemble A
   varA <- reactive({ varname(input$varA, long=FALSE) })
 
@@ -40,26 +43,30 @@ shinyServer(function(input, output, session) {
   # Emission scenario - ensemble B
   scenarioB <- reactive({ scenarioname(input$sceB, long=FALSE) })
   
+  # Ensemble members for source, variable and scenario A 
   ensembleA <- reactive({ 
     if(sourceA()=="ESD") gcmnames[[varA()]][[scenarioA()]] else 
       paste(rcmnames[[varA()]][[scenarioA()]]$gcm, 
             rcmnames[[varA()]][[scenarioA()]]$rcm, sep=" ")
   })
   
+  # Ensemble members for source, variable and scenario B 
   ensembleB <- reactive({ 
     if(sourceB()=="ESD") gcmnames[[varB()]][[scenarioB()]] else 
       paste(rcmnames[[varB()]][[scenarioB()]]$gcm,
             rcmnames[[varB()]][[scenarioB()]]$rcm, sep=" ")
   })
 
+  # Label for ensemble A
   labelA <- reactive({
     label <- paste0("Ensemble A  (",length(input$gcmsA)," simulations)")
   })
   
+  # Label for ensemble B
   labelB <- reactive({
     label <- paste0("Ensemble B  (",length(input$gcmsB)," simulations)")
   })
-
+  
   ## Click on the map marker - this updates the selected station location
   observeEvent(input$map_marker_click,{
     print("observeEvent() - click")
@@ -182,14 +189,15 @@ shinyServer(function(input, output, session) {
 
   # Update location choices when variable or region is changed
   observe({
+    print("Update location choices when variable or region is changed.")
     choicesA <- locs[[varB()]]$label#locs[[regionA()]][[varB()]]$label
     choicesB <- locs[[varB()]]$label#locs[[regionB()]][[varB()]]$label
     choices <- choicesA[choicesA %in% choicesB]
-    if(input$location!="-") {
-      if(input$location %in% choices) {
-        is <- which(input$location==choices)
+    if(location()!="-") {
+      if(location() %in% choices) {
+        is <- which(location()==choices)
       } else {
-        is <- grep(cleanstr(input$location, "[0-9]"),
+        is <- grep(cleanstr(location(), "[0-9]"),
                    cleanstr(choices, "[0-9]"))
         if(length(is)>1) {
           is <- is[[1]]
@@ -453,7 +461,7 @@ shinyServer(function(input, output, session) {
     print('output$timeseries')
     A <- zload_station_A()
     B <- zload_station_B()
-    stplot12(A, B, is=input$location, it=c(1950,2100),#itA(),
+    stplot(A, B, is=location(), it=c(1950,2100),#itA(),
              im1=imA(), im2=imB(), ylim=input$tsrangeA,
              label1=labelA(), label2=labelB())
   })#, height=function(){0.6*session$clientData$output_timeseries_width})
@@ -461,8 +469,8 @@ shinyServer(function(input, output, session) {
 
   ## Leaflet map for showing and interactively selecting location
   output$map <- renderLeaflet({
-    Y <- locs[[varA()]]#locs[[regionA()]][[varA()]]
-    selected <- which(Y$label==input$location)
+    Y <- locs[[varA()]]
+    selected <- which(Y$label==location())
     leaflet() %>% addTiles() %>%
       addCircleMarkers(lng = Y$longitude, # longitude
                        lat = Y$latitude, fill = TRUE, # latitude

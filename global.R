@@ -8,11 +8,7 @@ library(ggplot2)
 library(leaflet)
 library(plotly)
 
-source("rtools.R")
-source("calculate.trends.R")
-
 ## Initial choice of region, variable etc
-#reg0 <- "Nordic"
 var0 <- "pr"
 sce0 <- "rcp85"
 seas0 <- "djf"
@@ -22,6 +18,9 @@ path.rcm <- file.path(path.data, "rcm")
 pattern.esd <- "dse.kss.Nordic"
 pattern.rcm <- c("ens","EUR-11","remapbil")
 
+source("rtools.R")
+source("calculate.trends.R")
+
 datelist <- list("1951-2100" = c(1951,2100),
                  "1951-1980" = c(1951,1980),
                  "1990-2020" = c(1981,2010),
@@ -29,7 +28,7 @@ datelist <- list("1951-2100" = c(1951,2100),
                  "2071-2100" = c(2071,2100))
 
 sourcelist <- c("empirical statistical downscaling (MetNo ESD)", 
-                "dynamical downscaling (CORDEX RCM)")#c("ESD_Nordic", "ESD_Finland", "RCM", "GCM")
+                "dynamical downscaling (CORDEX RCM)")
 
 ## Meta data from RCM files 
 files.rcm <- list.files(path.rcm, pattern=c(pattern.rcm))
@@ -55,6 +54,7 @@ for(f in files.rcm) {
                                       regexpr("v[0-9]{1}",x)+1))
   nc_close(nc)
   i <- !duplicated(paste(gcm, rip, rcm, sep="_"))
+  var <- switch(var, "tas"="t2m", "tsd"="t2m", "fw"="pr", "mu"="pr", "precip"="pr", var)
   rcmnames[[var]][[scenario[[1]]]] <- list("rcm"=rcm[i], "gcm"=paste(gcm[i], rip[i], sep="."))
 }
 
@@ -62,24 +62,20 @@ for(f in files.rcm) {
 files.all <- list.files(path=path.esd, pattern=pattern.esd, full.names = TRUE)
 files <- files.all
 
-
+## Remove trends that do not match available data
 file.trends <- list.files(path=path.esd, pattern='trends.rda', full.names = TRUE)
 load(file.trends)
 T4 <- trends
-#for(region in names(trends)) {
-  for(var in names(trends)) {#[[region]])) {
-    for(scenario in names(trends[[var]])) {#[[region]][[var]])) {
-      for(it in names(trends[[var]][[scenario]])) {#[[region]][[var]][[scenario]]) {
-        if(! any(grepl(var, files) &
-                 #grepl(region, files) & 
-                 grepl(scenario, files) & grepl(it, files)) ) {
-          #T4[[region]][[var]][[scenario]][[it]] <- NULL
-          T4[[var]][[scenario]][[it]] <- NULL
-        }
+for(var in names(trends)) {
+  for(scenario in names(trends[[var]])) {
+    for(it in names(trends[[var]][[scenario]])) {
+      if(! any(grepl(var, files) &
+               grepl(scenario, files) & grepl(it, files)) ) {
+        T4[[var]][[scenario]][[it]] <- NULL
       }
     }
   }
-#}
+}
 rm("trends")
 
 nms <- gsub(file.path(path.esd, pattern.esd),'',files)
@@ -100,66 +96,42 @@ namesplit <- function(x) {
   src <- info[[length(info)-2]]
   varid <- info[[length(info)-3]]
   return(list(varid=varid,src=src,nem=nem,sce=sce,it=it))
-  #if(length(info)<5) {
-  #  region <- NULL
-  #} else {
-  #  region <- info[[length(info)-4]]
-  #}
-  #return(list(region=region,varid=varid,src=src,nem=nem,sce=sce,it=it))
 }
 
 verbose <- FALSE
 if(verbose) print('List names:')
 if(verbose) print(nms)
 n <- length(nms)
-#regs <- rep('?',n); 
 vars <- rep('?',n); srcs <- vars;
 nems <- vars; sces <- vars; its <- vars
 for (i in 1:n) {
-  #regs[i] <- namesplit(nms[i])$region
   vars[i] <- namesplit(nms[i])$varid
   srcs[i] <- namesplit(nms[i])$src
   sces[i] <- namesplit(nms[i])$sce
   its[i] <- namesplit(nms[i])$it
   nems[i] <- length(attr(T4[[vars[i]]][[sces[i]]][[its[i]]], "model_id"))
-  #nems[i] <- length(attr(T4[[regs[i]]][[vars[i]]][[sces[i]]][[its[i]]], "model_id"))
 }
-#print('Categories for UI selection:')
 cats <- data.frame(var=vars,src=srcs,nem=nems,sce=sces,it=its)
-#cats <- data.frame(region=regs,var=vars,src=srcs,nem=nems,sce=sces,it=its)
 
 locs <- list()
-#for(region in unique(regs)) {
-  for(var in unique(vars)) {
-    locs[[var]][["location"]] <- loc(T4[[var]][[1]][[1]])
-    locs[[var]][["station_id"]] <- stid(T4[[var]][[1]][[1]])
-    locs[[var]][["label"]] <- paste0(first2upper(loc(T4[[var]][[1]][[1]])),
-                                               " (",stid(T4[[var]][[1]][[1]]),")")
-    locs[[var]][["longitude"]] <- lon(T4[[var]][[1]][[1]])
-    locs[[var]][["latitude"]] <- lat(T4[[var]][[1]][[1]])
-    locs[[var]][["altitude"]] <- alt(T4[[var]][[1]][[1]])
-    #locs[[region]][[var]][["location"]] <- loc(T4[[region]][[var]][[1]][[1]])
-    #locs[[region]][[var]][["station_id"]] <- stid(T4[[region]][[var]][[1]][[1]])
-    #locs[[region]][[var]][["label"]] <- paste0(first2upper(loc(T4[[region]][[var]][[1]][[1]])),
-    #                                " (",stid(T4[[region]][[var]][[1]][[1]]),")")
-    #locs[[region]][[var]][["longitude"]] <- lon(T4[[region]][[var]][[1]][[1]])
-    #locs[[region]][[var]][["latitude"]] <- lat(T4[[region]][[var]][[1]][[1]])
-    #locs[[region]][[var]][["altitude"]] <- alt(T4[[region]][[var]][[1]][[1]])
-  }
-#}
+for(var in unique(vars)) {
+  locs[[var]][["location"]] <- loc(T4[[var]][[1]][[1]])
+  locs[[var]][["station_id"]] <- stid(T4[[var]][[1]][[1]])
+  locs[[var]][["label"]] <- paste0(first2upper(loc(T4[[var]][[1]][[1]])),
+                                             " (",stid(T4[[var]][[1]][[1]]),")")
+  locs[[var]][["longitude"]] <- lon(T4[[var]][[1]][[1]])
+  locs[[var]][["latitude"]] <- lat(T4[[var]][[1]][[1]])
+  locs[[var]][["altitude"]] <- alt(T4[[var]][[1]][[1]])
+}
 
 gcmnames <- list()
 for(scenario in unique(sces)) {
   for(var in unique(vars)) {
-    gcmnames[[var]][[scenario]] <- attr(T4[[var]][[scenario]][[1]], "model_id")#[[1]][[var]][[scenario]][[1]], "model_id")
+    gcmnames[[var]][[scenario]] <- attr(T4[[var]][[scenario]][[1]], "model_id")
   }
 }
 
 scenarios <- unique(sces)
 scenarios <- as.vector(sapply(scenarios, scenarioname))
-#scenarios <- paste(toupper(scenarios),
-#                   c("(CMIP5)","(CMIP6)")[as.numeric(grepl("SSP", scenarios))+1])
-#names(scenarios) <- unique(sces)
-
 
 

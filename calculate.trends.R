@@ -3,9 +3,9 @@
 ## Support functions
 source("rtools.R")
 
-## This is the path to the downscaled ensemble data 
-path.esd <- "data/esd"
-pattern.esd <- "dse.kss.Nordic"
+## This is the path to the downscaled ensemble data - set in global.R
+#path.esd <- "data/esd"
+#pattern.esd <- "dse.kss.Nordic"
 
 ## file name format: pattern.variable...scenario...season...rda
 ## where pattern is defined above, scenario is e.g. rcp45 or ssp585,
@@ -34,39 +34,33 @@ scenarios <- unique(gsub("[[:punct:]].*.","",
 seasons <- unique(substr(files.dse, regexpr("djf|mam|jja|son|ann", files.dse), 
                          regexpr("djf|mam|jja|son|ann", files.dse) + 2))
 Z <- NULL
-#for(region in regions) {
-#  print(region)
-  for(param in variables) {#[grepl("t2m|pr|fw",variables)]) {
-    print(param)
-    for(rcp in scenarios) {
-      print(rcp)
-      for(season in seasons) {
-        print(season)
-        #i.select <- grepl(paste0(".*",region,".*",param,".*",rcp,".*",season,".*"),
-        #                  files.dse)
-        i.select <- grepl(paste0(".*",param,".*",rcp,".*",season,".*"),
-                          files.dse)
-        if(any(i.select)) {
-          print('Calculating ensemble statistics of trends')
-          #if(is.null(trends[[region]][[param]][[rcp]][[season]])) {
-          if(is.null(trends[[param]][[rcp]][[season]])) {
-            Z <- try(zload(path.esd, pattern=c(pattern.esd,param,rcp,season)))
-            if(inherits(Z, c("try-error","NULL"))) {
-              print(paste("Could not load dse.kss",
-                        #region, 
-                        param, rcp, season, sep="."))
-            } else if(inherits(Z, "dsensemble")) {
-              #trends[[region]][[param]][[rcp]][[season]] <- trend.dsensemble(Z)
-              trends[[param]][[rcp]][[season]] <- trend.dsensemble(Z)
-              save(file=file.trends, trends)
-              Z <- NULL
-            }
+for(param in variables) {#[grepl("t2m|pr|fw",variables)]) {
+  print(param)
+  for(rcp in scenarios) {
+    print(rcp)
+    for(season in seasons) {
+      print(season)
+      i.select <- grepl(paste0(".*",param,".*",rcp,".*",season,".*"),
+                        files.dse)
+      if(any(i.select)) {
+        print('Calculating ensemble statistics of trends')
+        if(is.null(trends[[param]][[rcp]][[season]])) {
+          Z <- try(zload(path=path.esd, src="ESD", param=param, 
+                         season=season, scenario=rcp,
+                         FUNX="mean", pattern.esd=pattern.esd))
+          if(inherits(Z, c("try-error","NULL"))) {
+            print(paste("Could not load ESD data for",
+                        param, rcp, season, sep=" "))
+          } else if(inherits(Z, "dsensemble")) {
+            trends[[param]][[rcp]][[season]] <- trend.dsensemble(Z)
+            save(file=file.trends, trends)
+            Z <- NULL
           }
         }
       }
     }
   }
-#}
+}
 
 # show.plots <- FALSE
 # if(show.plots) {
