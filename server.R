@@ -415,18 +415,34 @@ shinyServer(function(input, output, session) {
     )
   })
 
-  ## Information about ensemble A
+  ## Information about ensemble A - for time series
   output$InfoA <- renderText(
-    paste0(first2upper(input$seasA, all=FALSE, lower=FALSE), "  ", input$varA, "<br>",
-           first2upper(input$srcA, all=FALSE, lower=FALSE), "<br>", 
+    paste0(first2upper(input$srcA, all=FALSE, lower=FALSE), "<br>", 
+           first2upper(input$seasA, all=FALSE, lower=FALSE), "  ", input$varA, "<br>",
+           first2upper(input$sceA, all=FALSE, lower=FALSE), "<br>",
+           length(input$gcmsA), " simulations<br>")
+  )
+  
+  ## Information about ensemble A - for map
+  output$InfoA2 <- renderText(
+    paste0(first2upper(input$srcA, all=FALSE, lower=FALSE), "<br>", 
+           first2upper(input$seasA, all=FALSE, lower=FALSE), "  ", input$varA, "<br>",
            first2upper(input$sceA, all=FALSE, lower=FALSE), "<br>",
            length(input$gcmsA), " simulations<br>")
   )
 
-  ## Information about ensemble B
+  ## Information about ensemble B - for time series
   output$InfoB <- renderText(paste0(
-    paste0(first2upper(input$seasA, all=FALSE, lower=FALSE), "  ", input$varA, "<br>",
-           first2upper(input$srcB, all=FALSE, lower=FALSE), "<br>", 
+    paste0(first2upper(input$srcB, all=FALSE, lower=FALSE), "<br>", 
+           first2upper(input$seasA, all=FALSE, lower=FALSE), "  ", input$varA, "<br>",
+           first2upper(input$sceB, all=FALSE, lower=FALSE), "<br>",
+           length(input$gcmsB), " simulations<br>")
+  ))
+
+  ## Information about ensemble B - for map
+  output$InfoB2 <- renderText(paste0(
+    paste0(first2upper(input$srcB, all=FALSE, lower=FALSE), "<br>", 
+           first2upper(input$seasA, all=FALSE, lower=FALSE), "  ", input$varA, "<br>",
            first2upper(input$sceB, all=FALSE, lower=FALSE), "<br>",
            length(input$gcmsB), " simulations<br>")
   ))

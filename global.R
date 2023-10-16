@@ -7,6 +7,7 @@ library(esd)
 library(ggplot2)
 library(leaflet)
 library(plotly)
+library(raster)
 
 ## Initial choice of region, variable etc
 var0 <- "pr"
@@ -78,8 +79,8 @@ for(var in names(trends)) {
 }
 rm("trends")
 
-nms <- gsub(file.path(path.esd, pattern.esd),'',files)
-nms <- gsub('_[0-9]{4}-[0-9]{4}.rda','',nms)
+nms <- gsub(paste0(file.path(path.esd, pattern.esd),'.'),'',files)
+nms <- gsub('.rda','',nms)
 names(files) <- nms
 
 ## namesplit splits the list names into different categories
@@ -87,32 +88,33 @@ names(files) <- nms
 ##      Finland.fw.ecad.rcp26.djf
 namesplit <- function(x) {
   info <- unlist(strsplit(gsub("dse.kss.|.rda", "", x), "\\.|\\_"))
-  it <- info[[length(info)]]
-  sce <- info[[length(info)-1]]
-  if(grepl(paste0("[0-9]{1,3}",c("rcp","ssp"), collapse="|"), x)) {
-    nem <- gsub("rcp.*.|ssp.*.", sce)
-    sce <- substr(sce, regexpr("rcp|ssp"), nchar(sce))
-  } else nem <- NULL
-  src <- info[[length(info)-2]]
-  varid <- info[[length(info)-3]]
-  return(list(varid=varid,src=src,nem=nem,sce=sce,it=it))
+  varid <- info[info %in% names(T4)]
+  period <- info[grepl("[0-9]{4}-[0-9]{4}", info)]
+  sce <- info[grepl("ssp|rcp", info)]
+  nem <- info[grepl("ngcm[1-9]{1,3}", info)]
+  seas <- info[grepl("djf|mam|jja|son|annual", info)]
+  reanalysis <- info[grepl("era|ncep|merra|carra|cera|ora|cams|macc|asr|cfsr|jra|noaa", 
+                            tolower(info))]
+  info2 <- info[!info %in% c(varid, period, sce, nem, seas, reanalysis)]
+  src <- info2[[length(info2)]]
+  return(list(varid=varid,period=period,sce=sce,nem=nem,
+              season=seas,src=src,reanalysis=reanalysis))
 }
 
 verbose <- FALSE
 if(verbose) print('List names:')
 if(verbose) print(nms)
 n <- length(nms)
-vars <- rep('?',n); srcs <- vars;
-nems <- vars; sces <- vars; its <- vars
+vars <- srcs <- seas <- sces <- nems <- rep('?',n)
 for (i in 1:n) {
   vars[i] <- namesplit(nms[i])$varid
   srcs[i] <- namesplit(nms[i])$src
+  seas[i] <- namesplit(nms[i])$season
   sces[i] <- namesplit(nms[i])$sce
-  its[i] <- namesplit(nms[i])$it
-  nems[i] <- length(attr(T4[[vars[i]]][[sces[i]]][[its[i]]], "model_id"))
+  nems[i] <- length(attr(T4[[vars[i]]][[sces[i]]][[seas[i]]], "model_id"))
 }
-cats <- data.frame(var=vars,src=srcs,nem=nems,sce=sces,it=its)
 
+cats <- data.frame(var=vars,src=srcs,nem=nems,sce=sces,it=seas)
 locs <- list()
 for(var in unique(vars)) {
   locs[[var]][["location"]] <- loc(T4[[var]][[1]][[1]])

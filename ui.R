@@ -60,6 +60,9 @@ Bbox <- box(
 timeseries <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Time series</b></font>"),
                   collapsible = TRUE, collapsed=FALSE,
                   fluidRow(
+                    column(8,
+                           plotlyOutput("timeseries", width = "100%", height = "60%")
+                    ),
                     column(4,
                            leafletOutput("map"),#, width="20vw"),
                            absolutePanel(bottom = 30, left = 20, draggable=TRUE,
@@ -68,10 +71,19 @@ timeseries <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Time 
                                                      choices = locs[[var0]]$label,#locs[[reg0]][[var0]]$label,
                                                      selected = locs[[var0]]$label[[1]])#locs[[reg0]][[var0]]$label[[1]])
                            )
-                    ),
-                    column(8,
-                           plotlyOutput("timeseries", width = "100%", height = "60%")
                     )
+                  ),
+                  br(),
+                  br(),
+                  fluidRow(
+                    box(
+                      title="Ensemble A",
+                      width=6,
+                      htmlOutput("InfoA")),
+                    box(
+                      title="Ensemble B",
+                      width=6,
+                      htmlOutput("InfoB"))
                   ),
                   br(),
                   box(
@@ -94,8 +106,22 @@ timeseries <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Time 
 maps <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Maps</b></font>"),
             collapsible = TRUE, collapsed=FALSE,
             fluidRow(
+              box(
+                title="Ensemble A",
+                width=6,
+                htmlOutput("InfoA2")),
+              box(
+                title="Ensemble B",
+                width=6,
+                htmlOutput("InfoB2"))
+            ),
+            fluidRow(
               column(6,
-                     h5("Ensemble A"),
+                     #h5("Ensemble A"),
+                     #br(),
+                     plotOutput("mapA", width = "100%", height = "80%"),
+                     downloadButton(label = "save",
+                                    outputId = "savemapA"),
                      br(),
                      br(),
                      selectInput("funA",
@@ -108,14 +134,13 @@ maps <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Maps</b></f
                                  selected=names(datelist)[[1]]),
                      br(),
                      br(),
-                     plotOutput("mapA", width = "100%", height = "80%"),
-                     downloadButton(label = "save",
-                                    outputId = "savemapA"),
-                     br(),
-                     br()
               ),
               column(6, 
-                     h5("Ensemble B"),
+                     #h5("Ensemble B"),
+                     #br(),
+                     plotOutput("mapB", width = "100%", height = "80%"),
+                     downloadButton(label = "save",
+                                    outputId = "savemapB"),
                      br(),
                      br(),
                      selectInput("funB",
@@ -127,16 +152,9 @@ maps <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Maps</b></f
                                  choices=names(datelist),
                                  selected=names(datelist)[[1]]),
                      br(),
-                     br(),
-                     plotOutput("mapB", width = "100%", height = "80%"),
-                     downloadButton(label = "save",
-                                    outputId = "savemapB"),
-                     br(),
                      br()
               )
             ),
-            br(),
-            br(),
             box(
               title=HTML("<font size=+0>Plot settings</font>"),
               width = '100%' ,
@@ -168,10 +186,10 @@ maps <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Maps</b></f
 
 
 body <- dashboardBody(
-  fluidRow(
-    column(6, Abox),
-    column(6, Bbox)
-  ),
+  #fluidRow(
+  #  column(6, Abox),
+  #  column(6, Bbox)
+  #),
   fluidRow(
     tabsetPanel(
       tabPanel("Time series",

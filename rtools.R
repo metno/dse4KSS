@@ -1,8 +1,8 @@
-## Rasmus Benestad, Met Norway, 2016-11-02
-## R-shiny app that presents empirical-statistical downscaled results. The results include the CMIP5 ensemble simulations
-## for RCP4.5, RCP2.6, and RCP 8.5 for a number of stations and for the four different seasons. PCAs and EOFs have been used
-## to minimise the needed data volume, and this app expand information embedded in the PCAs/EOFs to corresponding information
-## in the form of station series or gridded maps.
+## Kajsa Parding, Met Norway, 2023-04-24
+## R-shiny app that presents downscaled results. The results include the CMIP5 and CMIP6 ensembles simulations
+## for a number of stations and for the four different seasons. The empirical-statistical downscaled results 
+## used PCAs and EOFs to minimise the needed data volume, and this app expand information embedded in the PCAs/EOFs 
+## to corresponding information in the form of station series or gridded maps.
 
 ## Remove special characters from string
 cleanstr <- function(x, remove=NULL) {
@@ -190,6 +190,13 @@ zload <- function(path="data/esd", type="field",
   } else {
     if(sum(i)>1) i <- i & !grepl("trend",files)
   }
+  
+  ## KMP 2023-10-16: Hacky solution to identifying multiple files
+  ## ...dse.kss.Nordic.t2m.ecad.ERA5t2m... 
+  ## ...dse.kss.Nordic.tsd.ecad.ERA5t2m...
+  ## when pattern includes t2m and this is in both files.
+  if(sum(i)>1 & "t2m" %in% pattern) i <- i & grepl("\\.t2m\\.", tolower(files))
+  
   if(sum(i)==1) {
     if(grepl(".rda", files[i]) & grepl("dse", files[i])) {
       if(verbose) print(paste("load file",files[i]))
@@ -241,6 +248,8 @@ zload <- function(path="data/esd", type="field",
     #}
   } else {
     Z <- NULL
+    if(verbose) print(paste("Could not figure out what or how to open the",
+                  length(i), "files", paste(files[i], collapse=", ")))
   }
   return(Z)
 }
@@ -303,10 +312,11 @@ mask.field <- function(x,land=FALSE) {
   return(x)
 }
 
-mask.station <- function(x,land=FALSE) {
+mask.station <- function(x,land=FALSE,verbose=FALSE) {
+  if(verbose) print("mask.station")
   data(etopo5, envir = environment())
   h <- subset(etopo5,is=list(lon=range(lon(x)),lat=range(lat(x))))
-  hx <- sapply(seq_along(x), function(i) {
+  hx <- sapply(seq_along(lon(x)), function(i) {
     ilon <- which.min(abs(lon(h)-lon(x)[i]))
     ilat <- which.min(abs(lat(h)-lat(x)[i]))
     return(h[ilon,ilat])
@@ -435,17 +445,16 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   
   ## Add field 
   if (show.field) {
-    #cb <- colbar.ini(m,FUN=NULL,colbar=colbar,verbose=verbose)
     image(lon(m),lat(m),m,xlab="",ylab="",add=TRUE,
           col=cb$col,breaks=cb$breaks,xlim=xlim,ylim=ylim)
   }
   
   ## Add stations
   if (show.stations) {
-    #cb <- colbar.ini(m2,FUN=NULL,colbar=colbar,verbose=verbose)
     icol <- apply(as.matrix(m2),2,findInterval,cb$breaks)
     col <- cb$col[icol]
-    #prmean <- map(precip.NORDKLIM, FUN="mean")
+    #points(lon(m2), lat(m2), pch = pch,
+    #       bg=cb$col[icol], col=col, cex=cex)
     xyz <- cbind(as.vector(lon(m2)), 
                  as.vector(lat(m2)), 
                  as.vector(m2))
@@ -455,8 +464,6 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     m2r <- rasterize(xyz[, 1:2], r, xyz[,3], fun=mean)
     image(m2r, xlab="", ylab="", add=TRUE,
           col=cb$col, breaks=cb$breaks, xlim=xlim, ylim=ylim)
-    #points(lon(m2), lat(m2), pch = pch,
-    #       bg=cb$col[icol], col=col, cex=cex)
   }
   
   varnm <- attr(m,"variable")
@@ -470,7 +477,8 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
 
   ## Add colorbar
   dy <- diff(ylim)*0.07
-  below <- c(min(xlim), min(ylim)-dy/2, max(xlim), min(ylim)+dy/2)
+  below <- c(min(xlim), min(ylim),#min(ylim)-dy/2, 
+             max(xlim), min(ylim)+dy)#min(ylim)+dy/2)
   rect(below[1], below[2]-2*dy, below[3], below[4], 
        col = "white", border = "white")
   col.bar(below[1],below[2],below[3],below[4],
@@ -486,8 +494,6 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     if(inherits(Z,"dsensemble") & !is.null(trends)) {
       sig <- apply(trends[im,], 2, function(x) max(sum(x>0), sum(x<0))/length(x))
       s <- sig>=threshold | sig <= (1-threshold)
-      #points(lon(y_B)[s], lat(y_B)[s], col='black', pch=21, cex=cex*0.8, lwd=lwd)
-      #points(lon(y_B)[s], lat(y_B)[s], col='black', pch='.', cex=cex*0.1)
       slonlat <- cbind(round(lon(y_B)[s], decimals), 
                        round(lat(y_B)[s], decimals))
       slonlat <- slonlat[!duplicated(slonlat),]
@@ -503,129 +509,6 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   }
 }
 
-
-# ## Plot individual station
-# stplot <- function(z, is=NULL, it=NULL, im=NULL, main=NULL, 
-#                    MET="ESD", ylim=NULL, verbose=FALSE) {
-#   if(verbose) print('--- Plot individual station ---')
-#   if(!inherits(z, "station")) z <- as.station(z)
-#   if(is.null(is)) {
-#     is <- 1
-#   } else {
-#     is <- grep(cleanstr(is, "[A-Z]"), stid(z))
-#     if(length(is)==0) is <- 1
-#   }
-#   
-#   if(is.null(it)) {
-#     it <- c(1950, 2100)
-#   } else {
-#     it <- range(as.numeric(it))
-#   }
-#   y <- subset(z, is=is, it=it, im=im)
-#   if(MET=="ESD") {
-#     plot(y, target.show=FALSE, legend.show=FALSE, new=FALSE, #main=main,
-#        xrange=range(attr(z, "longitude"))+c(-5,5), ylim=ylim,
-#        yrange=range(attr(z, "latitude"))+c(-2,2), map.show=TRUE,
-#        mar=c(3,5,4,4))
-#   } else if(MET=="RCM"){
-#     param <- attr(y,"variable")[1]
-#     season <- toupper(attr(z, "season"))[1]
-#     scenario <- tolower(attr(y, "scenario"))     
-#     
-#     lonst <- abs(attr(y, "longitude"))
-#     latst <- abs(attr(y, "latitude"))
-#     
-#     paramfn <- varname(param,long=FALSE)
-#     if (param == "precip") paramfn <- "pr"
-#     
-#     if(paramfn %in% c("fw","mu")) paramfn <- "pr"
-#     if(paramfn %in% c("t2m","tsd")) paramfn <- "tas"
-#     
-#     years <- 1950:2100
-#     tidx <- which(years %in% it)
-#     yr <- years[years>=min(it) & years<=max(it)]
-#     
-#     data.dir <- "data/rcm/" #link to /lustre/storeB/users/andreasd/KiN_2023_data/ESDandRCM4KSS/Nordic/rcm
-#     ## Mean value
-#     filename <- paste0("ensmean_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
-#     ncfile <- paste0(data.dir,filename)
-#     if(verbose) print(paste("Getting",paramfn,"from",ncfile))
-#     
-#     nc <- nc_open(ncfile)
-#     lonrcm <- ncvar_get(nc,"lon")
-#     latrcm <- ncvar_get(nc,"lat")
-#     
-#     #Calculate the distance to the point for every grid box
-#     dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
-#     #find the indices with the minimum distance
-#     idx <- which(dist==min(dist),arr.ind=T)
-#     
-#     rcm <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
-#     nc_close(nc)
-#     
-#     ## Max value
-#     filename <- paste0("ensmax_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
-#     ncfile <- paste0(data.dir,filename)
-#     if(verbose) print(paste("Getting",paramfn,"from",ncfile))
-#     
-#     nc <- nc_open(ncfile)
-#     lonrcm <- ncvar_get(nc,"lon")
-#     latrcm <- ncvar_get(nc,"lat")
-#     
-#     #Calculate the distance to the point for every grid box
-#     dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
-#     #find the indices with the minimum distance
-#     idx <- which(dist==min(dist),arr.ind=T)
-#     
-#     rcm.max <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
-#     nc_close(nc)
-#     
-#     ## Max value
-#     filename <- paste0("ensmin_remapbil_",paramfn,"_EUR-11_",scenario,"_",season,".nc")
-#     ncfile <- paste0(data.dir,filename)
-#     if(verbose) print(paste("Getting",paramfn,"from",ncfile))
-#     
-#     nc <- nc_open(ncfile)
-#     lonrcm <- ncvar_get(nc,"lon")
-#     latrcm <- ncvar_get(nc,"lat")
-#     
-#     #Calculate the distance to the point for every grid box
-#     dist <- sqrt((cos(latrcm/180*pi)*(lonrcm-lonst))^2+(latrcm-latst)^2)
-#     #find the indices with the minimum distance
-#     idx <- which(dist==min(dist),arr.ind=T)
-#     
-#     rcm.min <- ncvar_get(nc,paramfn,start=c(idx[1],idx[2],tidx[1]),count=c(1,1,tidx[2]-tidx[1]+1))
-#     nc_close(nc)
-#     
-#     if (paramfn == "pr") {
-#       rcm <- rcm*3600*24 # mm/s to mm/day
-#       rcm.max <- rcm.max*3600*24 # mm/s to mm/day
-#       rcm.min <- rcm.min*3600*24 # mm/s to mm/day
-#       unit <- "mm/day"
-#     }
-#     if (param == "t2m") {
-#       rcm <- rcm-273.15 #K to °C
-#       rcm.max <- rcm.max-273.15 #K to °C
-#       rcm.min <- rcm.min-273.15 #K to °C
-#       unit <- "deg*C"
-#     }
-#     if (param %in% c("tsd","fw","mu")) {
-#       rcm <- rcm*NA # not yet available
-#       rcm.max <- rcm.max*NA # not yet available
-#       rcm.min <- rcm.min*NA # not yet available
-#       unit <- NA
-#     }
-# 
-#     rcm <- as.station(as.zoo(rcm, order.by=yr), param = param, unit = unit)
-#     rcm.max <- as.station(as.zoo(rcm.max, order.by=yr), param = param, unit = unit)
-#     rcm.min <- as.station(as.zoo(rcm.min, order.by=yr), param = param, unit = unit)
-#     plot(rcm, new=FALSE, ylim=ylim, mar=c(3,5,4,4),type="l",col="navy",main=loc(y))
-#     grid()
-#     lines(rcm.max, col="black", lty=2)
-#     lines(rcm.min, col="black", lty=2)
-#   }
-#   
-# }
 
 
 stplot <- function(z1, z2, im1=NULL, im2=NULL,
@@ -677,7 +560,7 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
   if(is.null(label1)) label1 <- "Ensemble A"
   if(is.null(label2)) label2 <- "Ensemble B"
     
-  cols <- c("red", "royalblue","yellow")#c("darkorange", "blueviolet")
+  cols <- c("red", "royalblue","yellow")
 
   if(inherits(y_A, "dsensemble")) {
     mean_A <- apply(y_A, 1, mean)
@@ -707,14 +590,6 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
     q95_B <- rep(NA, length(mean_B))
   }
   
-  #data <- data.frame(date = c(index(y_A), index(y_B)),
-  #                   ensemble = c(rep("A", length(mean_A)), 
-  #                                rep("B", length(mean_B))),
-  #                   mean = c(mean_A, mean_B), 
-  #                   min = c(min_A, min_B), 
-  #                   max = c(max_A, max_B), 
-  #                   q5 = c(q5_A, q5_B), 
-  #                   q95 = c(q95_A, q95_B))
   d <- unique(index(y_A), index(y_B))
   sm <- data.frame(matrix(NA, ncol=7, nrow=length(d)))
   colnames(sm) <- c("date","mean_A","min_A","max_A",
@@ -744,27 +619,6 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
          yaxis = list(title = ylab, range = ylim),
          legend = list(x=0, y=.95, traceorder="normal",
                        font = list(family = "sans-serif", size=12, color="black")))
-  #
-  #p <- ggplot(data = data, aes(x = date, y = mean)) + 
-  #  geom_ribbon(aes(ymin = min, ymax = max, fill = ensemble), alpha=0.5) +
-  #  geom_line(aes(x = date, y = mean, color=ensemble), linewidth=1) + 
-  #  scale_color_manual(values = cols) +
-  #  scale_fill_manual(values = cols) + 
-  #  xlab(xlab) + ylab(ylab) + ggtitle(main) +
-  #  theme_minimal()
-    
-  #if(attr(y_A, "unit")!=attr(y_B, "unit")) {
-  #  if(is.null(ylab2)) ylab2 <- paste0(attr(y_B, "longname")[1], 
-  #                                     "  (", attr(y_B,"unit")[1], ")")
-  #  if(is.null(ylim2)) ylim2 <- diff(range(y_B))/diff(range(y_A))
-  #  p <- p + scale_y_continuous(
-  #    name = ylab, limits = ylim,
-  #    sec.axis = sec_axis(~.*ylim2, name=ylab2)) +
-  #    theme(axis.text.y.right =  element_text(color = cols[2]),
-  #          axis.title.y.right = element_text(color= cols[2])
-  #  )
-  #}
-  #
-  #p
 
 }
+
