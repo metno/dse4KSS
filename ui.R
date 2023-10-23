@@ -5,7 +5,7 @@
 library(shiny)
 library(shinydashboard)
 library(leaflet)
-
+library(plotly)
 
 header <- dashboardHeader(
   title = "The Nordic region climate atlas",
@@ -18,7 +18,7 @@ introbox <- box(
   width = '100%' ,
   status = 'primary',
   collapsible = TRUE,
-  collapsed = FALSE,
+  collapsed = TRUE,
   htmlOutput("IntroText"),
   br(),
   box(
