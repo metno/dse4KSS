@@ -251,7 +251,7 @@ shinyServer(function(input, output, session) {
   # Load data for ensemble A
   zload_A <- reactive({
     Z <- zload(path=pathA(), src=sourceA(), param=varA(), season=seasonA(), 
-               scenario=scenarioA(), FUN=input$funA)
+               scenario=scenarioA(), FUN=input$funA, im=imA())
     attr(Z, "season") <- seasonA()
     attr(Z, "scenario") <- scenarioA()
     return(Z)
@@ -260,7 +260,7 @@ shinyServer(function(input, output, session) {
   # Load data for ensemble B
   zload_B <- reactive({
     Z <- zload(path=pathB(), src=sourceB(), param=varB(), season=seasonB(), 
-               scenario=scenarioB(), FUN=input$funB)
+               scenario=scenarioB(), FUN=input$funB, im=imB())
     attr(Z, "season") <- seasonB()
     attr(Z, "scenario") <- scenarioB()
     return(Z)
@@ -269,7 +269,7 @@ shinyServer(function(input, output, session) {
   # Load data and transform to station data - ensemble A
   zload_station_A <- reactive({
     Z <- zload(path=pathA(), src=sourceA(), param=varA(), season=seasonA(), 
-               scenario=scenarioA())
+               scenario=scenarioA(), im=imA())
     attr(Z, "season") <- seasonA()
     attr(Z, "scenario") <- scenarioA()
     if(inherits(Z,"dsensemble")) {
@@ -281,10 +281,10 @@ shinyServer(function(input, output, session) {
       y <- Z
       ymax <- zload(path=pathA(), param=varA(), src=sourceA(), 
                     scenario=scenarioA(), season=seasonA(), 
-                    FUNX="max")
+                    im=imA(), FUNX="max")
       ymin <- zload(path=pathA(), param=varA(), src=sourceA(), 
                     scenario=scenarioA(), season=seasonA(), 
-                    FUNX="min")
+                    im=imA(), FUNX="min")
       attr(y, "max") <- ymax
       attr(y, "min") <- ymin
     }
@@ -294,7 +294,7 @@ shinyServer(function(input, output, session) {
   # Load data and transform to station data - ensemble B
   zload_station_B <- reactive({
     Z <- zload(path=pathB(), src=sourceB(), param=varB(), season=seasonB(), 
-               scenario=scenarioB())
+               scenario=scenarioB(), im=imB())
     attr(Z, "season") <- seasonB()
     attr(Z, "scenario") <- scenarioB()
     if(inherits(Z,"dsensemble")) {
@@ -306,10 +306,10 @@ shinyServer(function(input, output, session) {
       y <- Z
       ymax <- zload(path=pathB(), param=varB(), src=sourceB(), 
                     scenario=scenarioB(), season=seasonB(), 
-                    FUNX="max")
+                    im=imB(), FUNX="max")
       ymin <- zload(path=pathB(), param=varB(), src=sourceB(), 
                     scenario=scenarioB(), season=seasonB(), 
-                    FUNX="min")
+                    im=imB(), FUNX="min")
       attr(y, "max") <- ymax
       attr(y, "min") <- ymin
     }
@@ -323,7 +323,7 @@ shinyServer(function(input, output, session) {
     } else {
       p <- zload(path=pathA(), param=varA(), src=sourceA(), 
                  scenario=scenarioA(), season=seasonA(), 
-                 FUN="trend")
+                 im=imA(), FUN="trend")
     }
     return(p)
   })
@@ -335,7 +335,7 @@ shinyServer(function(input, output, session) {
     } else {
       p <- zload(path=pathB(), param=varB(), src=sourceB(), 
                  scenario=scenarioB(), season=seasonB(), 
-                 FUN="trend")
+                 im=imB(), FUN="trend")
     }
     return(p)
   })
@@ -455,7 +455,7 @@ shinyServer(function(input, output, session) {
   mapA <- reactive({
     print('output$mapA')
     z <- zload_A()
-    mapgridded(z, im=imA(), it=itA(), verbose=FALSE,
+    mapgridded(z, it=itA(), verbose=FALSE,
                FUN=input$funA, FUNX="mean", MET=sourceA(),
                colbar=list(breaks=pretty(input$valrangeA, n=22)),
                show.robustness = input$robustness_map,
@@ -468,7 +468,7 @@ shinyServer(function(input, output, session) {
   mapB <- reactive({
     print('output$mapB')
     z <- zload_B()
-    mapgridded(z, im=imB(), it=itA(), verbose=FALSE,
+    mapgridded(z, it=itA(), verbose=FALSE,
                FUN=input$funB, FUNX="mean", MET=sourceB(),
                colbar=list(breaks=pretty(input$valrangeB, n=22)),
                show.robustness = input$robustness_map,
@@ -481,8 +481,8 @@ shinyServer(function(input, output, session) {
     print('output$timeseries')
     A <- zload_station_A()
     B <- zload_station_B()
-    stplot(A, B, is=location(), it=c(1950,2100),#itA(),
-             im1=imA(), im2=imB(), ylim=input$tsrangeA,
+    stplot(A, B, is=location(), it=c(1950,2100),
+             ylim=input$tsrangeA,
              label1=labelA(), label2=labelB())
   })#, height=function(){0.6*session$clientData$output_timeseries_width})
 
@@ -514,7 +514,7 @@ shinyServer(function(input, output, session) {
   output$mapA <- renderPlot({
     print('output$mapA')
     z <- zload_A()
-    mapgridded(z, im=imA(), it=itA(), oceanmask=input$landmask,
+    mapgridded(z, it=itA(), oceanmask=input$landmask,
                FUN=input$funA, FUNX="mean", MET=sourceA(),
                colbar=list(breaks=pretty(input$valrangeA, n=22)),
                show.robustness = input$robustness_map, cex=1.4,
@@ -526,7 +526,7 @@ shinyServer(function(input, output, session) {
   output$mapB <- renderPlot({
     print('output$mapB')
     z <- zload_B()
-    mapgridded(z, im=imB(), it=itB(), oceanmask=input$landmask,
+    mapgridded(z, it=itB(), oceanmask=input$landmask,
                FUN=input$funB, FUNX="mean", MET=sourceB(),
                colbar=list(breaks=pretty(input$valrangeB, n=22)),
                show.robustness = input$robustness_map, cex=1.4,

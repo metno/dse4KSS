@@ -10,9 +10,9 @@ library(plotly)
 library(raster)
 
 ## Initial choice of region, variable etc
-var0 <- "pr"
-sce0 <- "rcp85"
-seas0 <- "djf"
+var0 <- "t2m"
+sce0 <- "rcp45"
+seas0 <- "jja"
 path.data <- "data"
 path.esd <- file.path(path.data, "esd")
 path.rcm <- file.path(path.data, "rcm")

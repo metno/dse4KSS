@@ -5,7 +5,6 @@
 library(shiny)
 library(shinydashboard)
 library(leaflet)
-library(plotly)
 
 header <- dashboardHeader(
   title = "The Nordic region climate atlas",
@@ -95,7 +94,7 @@ timeseries <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Time 
                     fluidRow(
                       column(6, offset=0.5,
                              sliderInput("tsrangeA", label="Range of y-axis in time series plot",
-                                         min=-30, max=50, step = 1, value=c(-5,20))
+                                         min=-30, max=50, step = 1, value=c(-5,30))
                       )
                     )
                   )
@@ -117,8 +116,6 @@ maps <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Maps</b></f
             ),
             fluidRow(
               column(6,
-                     #h5("Ensemble A"),
-                     #br(),
                      plotOutput("mapA", width = "100%", height = "80%"),
                      downloadButton(label = "save",
                                     outputId = "savemapA"),
@@ -136,8 +133,6 @@ maps <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Maps</b></f
                      br(),
               ),
               column(6, 
-                     #h5("Ensemble B"),
-                     #br(),
                      plotOutput("mapB", width = "100%", height = "80%"),
                      downloadButton(label = "save",
                                     outputId = "savemapB"),

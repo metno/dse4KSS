@@ -171,7 +171,7 @@ patterns <- function(param="t2m", src="ESD", scenario="rcp85",
 
 zload <- function(path="data/esd", type="field", 
                   src="ESD", param="t2m", season="djf", scenario="ssp585",
-                  FUNX="mean", FUN=NULL, 
+                  FUNX="mean", FUN=NULL, im=NULL,
                   pattern.esd="dse.kss.Nordic",
                   pattern.rcm=c("ens","EUR-11","remapbil"),
                   verbose=FALSE) {
@@ -201,7 +201,7 @@ zload <- function(path="data/esd", type="field",
     if(grepl(".rda", files[i]) & grepl("dse", files[i])) {
       if(verbose) print(paste("load file",files[i]))
       load(files[i])
-      Z <- xmembers(Z, verbose=verbose)
+      Z <- xmembers(Z, im=im, verbose=verbose)
       attr(Z, "season") <- season(Z$pca)
     } else if(grepl(".nc", files[i]) & grepl("ens", files[i])) {
       if(verbose) print(paste("Getting",param,"from",files[i]))
@@ -348,7 +348,6 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     if(is.null(it)) it <- range(year(Z[[3]]))
     if(verbose) print(paste('it=',paste(it,collapse=' - ')))
     z <- subset(Z, it=it, im=im)
-    
     if (FUNX=='mean') { # Faster response for ensemble mean
       y <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=eof,verbose=verbose)
       m <- map(y,FUN='mean',plot=FALSE)
@@ -492,6 +491,7 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     decimals <- 0
     cex.robust <- 2
     if(inherits(Z,"dsensemble") & !is.null(trends)) {
+      if(is.null(im)) im <- rep(TRUE, nrow(trends))
       sig <- apply(trends[im,], 2, function(x) max(sum(x>0), sum(x<0))/length(x))
       s <- sig>=threshold | sig <= (1-threshold)
       slonlat <- cbind(round(lon(y_B)[s], decimals), 
