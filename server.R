@@ -134,6 +134,28 @@ shinyServer(function(input, output, session) {
     updateCheckboxGroupInput(session, inputId = "gcmsB", choices = choices,
                              selected = selected)
   })
+  
+  # Select only one simulation from each GCM - ensemble A
+  # observeEvent(input$gcmsameA, {
+  #   choicesA <- ensembleA()
+  #   choicesB <- ensembleB()
+  #   if(sourceA()=="ESD") {
+  #     gcmA <- sapply(choicesA, function(x) strsplit(x, split=".r[0-9]{1,3}i[0-9]{1,3}")[[1]][1])
+  #     ripA <- sapply(choicesA, function(x) strsplit(x, split=".r[0-9]{1,3}i[0-9]{1,3}")[[1]][2])
+  #   }
+  #   if(sourceB()=="RCM") {
+  #     modelB <- sapply(choicesB, function(x) strsplit(x, split=" ")[[1]][1])
+  #     gcmB <- sapply(modelB, function(x) strsplit(x, split=".r[0-9]{1,3}i[0-9]{1,3}")[[1]][1])
+  #     ripB <- sapply(modelB, function(x) strsplit(x, split=".r[0-9]{1,3}i[0-9]{1,3}")[[1]][2])
+  #     cA <- tolower(cleanstr(choicesA))
+  #     cB <- tolower(cleanstr(choicesB))
+  #     im_A <- sapply(cA, function(x) sum(grepl(x, cB)))
+  #   }
+  #   gcm <- sapply(choices, function(x) strsplit(x, split=".r[0-9]{1,3}i[0-9]{1,3}")[[1]][1])
+  #   selected <- choices[!duplicated(gcm)]
+  #   updateCheckboxGroupInput(session, inputId = "gcmsA", choices = choices,
+  #                            selected = selected)
+  # })
 
   # Select all simulations - ensemble A
   observeEvent(input$gcmallA, {
@@ -323,7 +345,7 @@ shinyServer(function(input, output, session) {
     } else {
       p <- zload(path=pathA(), param=varA(), src=sourceA(), 
                  scenario=scenarioA(), season=seasonA(), 
-                 im=imA(), FUN="trend")
+                 im=imA(), FUN="postrend")#"trend")
     }
     return(p)
   })
@@ -335,7 +357,7 @@ shinyServer(function(input, output, session) {
     } else {
       p <- zload(path=pathB(), param=varB(), src=sourceB(), 
                  scenario=scenarioB(), season=seasonB(), 
-                 im=imB(), FUN="trend")
+                 im=imB(), FUN="postrend")#"trend")
     }
     return(p)
   })

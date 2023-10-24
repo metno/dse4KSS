@@ -8,6 +8,7 @@ library(ggplot2)
 library(leaflet)
 library(plotly)
 library(raster)
+source("~/git/esd/R/map.R")
 
 ## Initial choice of region, variable etc
 var0 <- "t2m"

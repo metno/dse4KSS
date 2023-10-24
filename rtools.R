@@ -350,6 +350,7 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     z <- subset(Z, it=it, im=im)
     if (FUNX=='mean') { # Faster response for ensemble mean
       y <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=eof,verbose=verbose)
+      attr(y, "mean") <- NULL
       m <- map(y,FUN='mean',plot=FALSE)
       if(show.stations | show.robustness) {
         y_B <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=FALSE,verbose=verbose)
