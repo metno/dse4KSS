@@ -13,27 +13,27 @@ header <- dashboardHeader(
 
 
 introbox <- box(
-  title = HTML("<font size=+1.5 color='black'><b>About the app</b></font>"),
+  title = HTML("<font size=+1.5 color='black'><b>About the Nordic climate atlas</b></font>"),
   width = '100%' ,
   status = 'primary',
-  collapsible = TRUE,
-  collapsed = TRUE,
+  collapsible = FALSE,
+  collapsed = FALSE,
   htmlOutput("IntroText"),
   br(),
   box(
-    title = HTML("<font size=+0 color='black'><i>Details</i></font>"),
+    title = HTML("<font size=+0 color='black'><i>How to use the app</i></font>"),
     width = '100%' ,
     status = 'primary',
-    collapsible = TRUE,
-    collapsed = TRUE,
+    collapsible = FALSE,
+    collapsed = FALSE,
     htmlOutput("HowtoText"),
   ),
   box(
     title = HTML("<font size=+0 color='black'><i>Data and method</i></font>"),
     width = '100%' ,
     status = 'primary',
-    collapsible = TRUE,
-    collapsed = TRUE,
+    collapsible = FALSE,
+    collapsed = FALSE,
     htmlOutput("DataText"),
   )
 )
@@ -71,110 +71,26 @@ timeseries <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Time 
                                                      selected = locs[[var0]]$label[[1]])#locs[[reg0]][[var0]]$label[[1]])
                            )
                     )
-                  ),
-                  br(),
-                  br(),
-                  fluidRow(
-                    box(
-                      title="Ensemble A",
-                      width=6,
-                      htmlOutput("InfoA")),
-                    box(
-                      title="Ensemble B",
-                      width=6,
-                      htmlOutput("InfoB"))
-                  ),
-                  br(),
-                  box(
-                    title=HTML("<font size=+0>Plot settings</font>"),
-                    width = '100%' ,
-                    status = 'primary',
-                    collapsible = TRUE,
-                    collapsed = TRUE,
-                    fluidRow(
-                      column(6, offset=0.5,
-                             sliderInput("tsrangeA", label="Range of y-axis in time series plot",
-                                         min=-30, max=50, step = 1, value=c(-5,30))
-                      )
-                    )
                   )
-                  
 )
 
 
 maps <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Maps</b></font>"),
             collapsible = TRUE, collapsed=FALSE,
             fluidRow(
-              box(
-                title="Ensemble A",
-                width=6,
-                htmlOutput("InfoA2")),
-              box(
-                title="Ensemble B",
-                width=6,
-                htmlOutput("InfoB2"))
-            ),
-            fluidRow(
               column(6,
+                     br(),
                      plotOutput("mapA", width = "100%", height = "80%"),
                      downloadButton(label = "save",
                                     outputId = "savemapA"),
-                     br(),
-                     br(),
-                     selectInput("funA",
-                                 label = "Time aggregation",
-                                 choices=c('mean','trend','max','min','sd'),
-                                 selected='trend'),
-                     selectInput("datesA",
-                                 label="Years",
-                                 choices=names(datelist),
-                                 selected=names(datelist)[[1]]),
-                     br(),
-                     br(),
+                     br()
               ),
               column(6, 
+                     br(),
                      plotOutput("mapB", width = "100%", height = "80%"),
                      downloadButton(label = "save",
                                     outputId = "savemapB"),
-                     br(),
-                     br(),
-                     selectInput("funB",
-                                 label = "Time aggregation",
-                                 choices=c('mean','trend','max','min','sd'),
-                                 selected='trend'),
-                     selectInput("datesB",
-                                 label="Years",
-                                 choices=names(datelist),
-                                 selected=names(datelist)[[1]]),
-                     br(),
                      br()
-              )
-            ),
-            box(
-              title=HTML("<font size=+0>Plot settings</font>"),
-              width = '100%' ,
-              status = 'primary',
-              collapsible = TRUE,
-              collapsed = TRUE,
-              fluidRow(
-                column(12, offset=0.5,
-                       checkboxInput("landmask",
-                                     label = "mask ocean in maps with regional climate model (RCM) results",
-                                     value = TRUE),
-                       checkboxInput("robustness_map",
-                                     label = "show trend robustness (same sign in 90% of ensemble members) in maps",
-                                     value = TRUE)
-                )
-              ),
-              fluidRow(
-                column(6, offset=0.5,
-                       sliderInput("valrangeA", label="Range of colorscale in map A",
-                                   min=-30, max=50, step = 1, value=c(-5,20))
-                ),
-                column(6, 
-                       sliderInput("valrangeB", label="Range of colorscale in map B",
-                                   min=-30, max=50, step = 1, value=c(-5,20))
-                )
               )
             )
 )
@@ -190,14 +106,16 @@ body <- dashboardBody(
       tabPanel("Time series",
                timeseries),
       tabPanel("Maps", 
-               maps)
+               maps),
+      tabPanel("About the app",
+               introbox)
     )
-  ),
-  fluidRow(
-    column(12,
-           introbox
-    )
-  )
+  )#,
+  #fluidRow(
+  #  column(12,
+  #         introbox
+  #  )
+  #)
 )
 
 sideboard <- dashboardSidebar(
@@ -283,7 +201,45 @@ sideboard <- dashboardSidebar(
                                 selected = gcmnames[[var0]][[sce0]],
                                 inline=TRUE,
                                 width='100%')
-    )
+    ),
+    menuItem("\n Plot settings - Time series", 
+             icon = icon("list"), tabname="settings_ts", startExpanded = FALSE,
+             br(),
+             checkboxInput("normalize_ts",
+                           label = "Normalize y-axis",
+                           value = FALSE),
+             sliderInput("tsrange", label="Range of y-axis",
+                         min=-30, max=50, step = 1, value=c(-5,30)),
+             br()),
+    menuItem("\n Plot settings - Map", 
+             icon = icon("list"), tabname="settings_map", startExpanded = FALSE,
+             br(),
+             selectInput("funA",
+                         label = "A: Time aggregation",
+                         choices=c('mean','trend','max','min','sd'),
+                         selected='trend'),
+             selectInput("datesA",
+                         label="A: Years",
+                         choices=names(datelist),
+                         selected=names(datelist)[[1]]),
+             selectInput("funB",
+                         label = "B: Time aggregation",
+                         choices=c('mean','trend','max','min','sd'),
+                         selected='trend'),
+             selectInput("datesB",
+                         label="B: Years",
+                         choices=names(datelist),
+                         selected=names(datelist)[[1]]),
+             checkboxInput("robustness_map",
+                           label = "show trend robustness (same sign in 90% of ensemble members)",
+                           value = TRUE),
+             checkboxInput("landmask",
+                           label = "mask ocean",
+                           value = TRUE),
+             sliderInput("valrangeA", label="A: Range of colorscale",
+                         min=-30, max=50, step = 1, value=c(-5,20)),
+             sliderInput("valrangeB", label="B: Range of colorscale",
+                         min=-30, max=50, step = 1, value=c(-5,20)))
   )
 )
 

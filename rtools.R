@@ -62,7 +62,7 @@ seasonname <- function(x, long=TRUE) {
 }
 
 ## Long and short emission scenario names
-scenarioname <- function(x, long=TRUE) {
+scenarioname <- function(x, long=TRUE, punct=FALSE) {
   y <- cleanstr(tolower(x))
   if(grepl("ssp",y)) {
     i <- regexpr("ssp", y)
@@ -73,16 +73,24 @@ scenarioname <- function(x, long=TRUE) {
     n <- 4
     y <- substr(y, i, i+n)
   }
-  if(long) y <- switch(y, 
+  if(long) {
+    y <- switch(y, 
                 "rcp26"="low emission scenario (RCP2.6)",
                 "rcp45"="medium emission scenario (RCP4.5)",
                 "rcp85"="high emission scenario (RCP8.5)",
-                "ssp119"="very low emission scenario (SSP1 1.9)",
-                "ssp126"="low emission scenario (SSP1 2.6)",
-                "ssp245"="medium emission scenario (SSP2 4.5)",
-                "ssp370"="medium-high emission scenario (SSP3 7.0)",
-                "ssp585"="high emission scenario (SSP5 8.5)",
+                "ssp119"="very low emission scenario (SSP1-1.9)",
+                "ssp126"="low emission scenario (SSP1-2.6)",
+                "ssp245"="medium emission scenario (SSP2-4.5)",
+                "ssp370"="medium-high emission scenario (SSP3-7.0)",
+                "ssp585"="high emission scenario (SSP5-8.5)",
                 x)
+  } else if(punct) {
+    y <- toupper(y)
+    y <- paste0(substr(y, 1, nchar(y)-1), ".",
+                substr(y, nchar(y), nchar(y)))
+    if(grepl("SSP",y)) y <- paste0(substr(y, 1, nchar(y)-3), "-",
+                                   substr(y, nchar(y)-2, nchar(y)))
+  }
   return(y)
 }
 
@@ -335,7 +343,7 @@ mask.station <- function(x,land=FALSE,verbose=FALSE) {
 
 ## Gridded maps
 mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
-                       it=NULL, im=NULL, main=NULL, colbar=NULL,
+                       it=NULL, im=NULL, main=NULL, sub=NULL, colbar=NULL,
                        show.field=TRUE, show.stations=FALSE, 
                        oceanmask=TRUE, 
                        pch=19, cex=1, lwd=1, xlim=NULL, ylim=NULL,
@@ -388,6 +396,7 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
     show.stations <- TRUE
   } else browser()
   if(is.null(main)) main <- " "
+  if(is.null(sub)) sub <- " "
   if(is.null(xlim)) xlim <- range(lon(m)) + diff(range(lon(m)))*c(-1,1)/5
   if(is.null(ylim)) ylim <- range(lat(m)) + diff(range(lat(m)))*c(-1,1)/5
   
@@ -417,6 +426,8 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   par(xaxt="n",yaxt="n",bty="n")
   plot(range(lon(m)),range(lat(m)),type="n",xlim=xlim,ylim=ylim,new=FALSE,
        xlab="",ylab="")
+  title(main=main, line=2.5, cex=0.75)
+  mtext(text=sub, side=3, outer=FALSE, line=-2, adj=0.05, cex=0.9)
   
   if(diff(range(xlim))>10) {
     dlon <- round(round(diff(range(xlim))/4)/5)*5
@@ -469,9 +480,16 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
   varnm <- attr(m,"variable")
   varnm <- gsub(" ","~",varnm)
   varnm <- switch(varnm, "precip"="Precipitation",
-                  "pr"="Preciptiation", "fw"="Wet-day~frequency",
+                  "pr"="Precipitation", "fw"="Wet-day~frequency",
                   "mu"="Wet-day~mean~precipitation",
-                  "t2m"="Temperature", "tas"="Temperature", varnm)
+                  "t2m"="Temperature", "tas"="Temperature",
+                  "precip~trend"="Precipitation~trend",
+                  "pr~trend"="Precipitation~trend", 
+                  "fw~trend"="Wet-day~frequency~trend",
+                  "mu~trend"="Wet-day~mean~precipitation~trend",
+                  "t2m~trend"="Temperature~trend", 
+                  "tas~trend"="Temperature~trend",
+                  varnm)
   unitx <- gsub(" ","~",attr(m, "unit"))
   label <- eval(parse(text=paste('expression(',varnm,'~(',unitx,')',')')))
 
@@ -519,6 +537,7 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
                      xlab=NULL, ylab=NULL, main=NULL,
                      ylim2=NULL, ylab2=NULL,
                      label1=NULL, label2=NULL,
+                     normalize=FALSE, it_normalize=c(1991,2020),
                      mar=c(2,2,2,1), mgp=c(2.5,1,0.5),
                      cex.axis=1, cex.lab=1.2, cex.main=1.2,
                      new=FALSE, add=FALSE, verbose=FALSE, ...) {
@@ -554,8 +573,11 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
       xlab <- "Dates"
     } else xlab <- " "
   } 
-  if(is.null(ylab)) ylab <- paste0(gsub("_"," ",attr(y_A,"longname")), 
-                                   "  (", attr(y_A, "unit"), ")")
+  if(is.null(ylab)) {
+    ylab <- gsub("_"," ",attr(y_A,"longname"))
+    if(normalize) ylab <- paste(ylab, "anomaly")
+    ylab <- paste0(ylab, "  (", attr(y_A, "unit"), ")")
+  }
   if(is.null(main)) main <- " "
   
   if(is.null(label1)) label1 <- "Ensemble A"
@@ -591,6 +613,23 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
     q95_B <- rep(NA, length(mean_B))
   }
   
+  if(normalize) {
+    norm_A <- mean(mean_A[index(y_A)>=min(it_normalize) & 
+                     index(y_A)<=max(it_normalize)])
+    mean_A <- mean_A - norm_A
+    min_A <- min_A - norm_A
+    max_A <- max_A - norm_A
+    q5_A <- q5_A - norm_A
+    q95_A <- q95_A - norm_A
+    norm_B <- mean(mean_B[index(y_B)>=min(it_normalize) & 
+                            index(y_B)<=max(it_normalize)])
+    mean_B <- mean_B - norm_B
+    min_B <- min_B - norm_B
+    max_B <- max_B - norm_B
+    q5_B <- q5_B - norm_B
+    q95_B <- q95_B - norm_B
+  }
+  
   d <- unique(index(y_A), index(y_B))
   sm <- data.frame(matrix(NA, ncol=7, nrow=length(d)))
   colnames(sm) <- c("date","mean_A","min_A","max_A",
@@ -603,6 +642,7 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
   sm[,5] <- smooth.spline(index(y_B), mean_B)$y[i2]
   sm[,6] <- smooth.spline(index(y_B), min_B)$y[i2]
   sm[,7] <- smooth.spline(index(y_B), max_B)$y[i2]
+  
   plot_ly(x = sm$date, y = sm$mean_A, type = "scatter", 
           mode = "lines", color = I(cols[1]), name=label1,
           line=list(color=I(cols[1]), width=4)) %>%
@@ -618,8 +658,9 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
               line=list(color=I(cols[2]), opacity=0.4, width=0)) %>%
   layout(title = main, plot_bgcolor = "white", xaxis = list(title = xlab), 
          yaxis = list(title = ylab, range = ylim),
-         legend = list(x=0, y=.95, traceorder="normal",
+         legend = list(x=0, y=.95, traceorder="normal", bgcolor='rgba(0,0,0,0)',
                        font = list(family = "sans-serif", size=12, color="black")))
-
+  #p.update_coloraxes(colorbar=dict(bgcolor='rgba(0,0,0,0)'))
+  
 }
 

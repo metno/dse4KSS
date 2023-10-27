@@ -57,16 +57,36 @@ shinyServer(function(input, output, session) {
             rcmnames[[varB()]][[scenarioB()]]$rcm, sep=" ")
   })
 
+  maintitle <- reactive({
+    paste0("Seasonal mean ",input$varA," ", toupper(seasonA()))
+  })
+  
   # Label for ensemble A
   labelA <- reactive({
-    label <- paste0("Ensemble A  (",length(input$gcmsA)," simulations)")
+    label <- paste0("A: ", input$srcA, "  ",
+                    scenarioname(input$sceA, long=FALSE, punct=TRUE),
+                    " (", length(input$gcmsA)," simulations)")
+  })
+  
+  labelA2lines <- reactive({
+    label <- paste0("A: ", input$srcA, "\n    ",
+                    scenarioname(input$sceA, long=FALSE, punct=TRUE),
+                    " (", length(input$gcmsA)," simulations)")
   })
   
   # Label for ensemble B
   labelB <- reactive({
-    label <- paste0("Ensemble B  (",length(input$gcmsB)," simulations)")
+    label <- paste0("B: ", input$srcB, "  ",
+                    scenarioname(input$sceB, long=FALSE, punct=TRUE),
+                    " (", length(input$gcmsB)," simulations)")
   })
   
+  labelB2lines <- reactive({
+    label <- paste0("B: ", input$srcB, "\n    ",
+                    scenarioname(input$sceB, long=FALSE, punct=TRUE),
+                    " (", length(input$gcmsB)," simulations)")
+  })
+
   ## Click on the map marker - this updates the selected station location
   observeEvent(input$map_marker_click,{
     print("observeEvent() - click")
@@ -193,7 +213,7 @@ shinyServer(function(input, output, session) {
   observe({
     if(input$funA=="trend") {
       updateSelectInput(session, "datesA",
-                  label="Years",
+                  label="A: Years",
                   choices=names(datelist),
                   selected=names(datelist)[[1]])
     }
@@ -203,7 +223,7 @@ shinyServer(function(input, output, session) {
   observe({
     if(input$funB=="trend") {
       updateSelectInput(session, "datesB",
-                        label="Years",
+                        label="B: Years",
                         choices=names(datelist),
                         selected=names(datelist)[[1]])
     }
@@ -238,7 +258,8 @@ shinyServer(function(input, output, session) {
   observe({
     x <- sliderange(param=varA(), FUN=input$funA)
     xstep <- diff(pretty(range(x$minmax), n=22))[1]
-    updateSliderInput(session, "valrangeA", label="Range of colorscale in map A",
+    updateSliderInput(session, "valrangeA", 
+                      label="A: Range of colorscale",
                       min=min(x$minmax), max=max(x$minmax),
                       step=xstep, value=x$x)
   })
@@ -247,10 +268,24 @@ shinyServer(function(input, output, session) {
   observe({
       x <- sliderange(param=varB(), FUN=input$funB)
     xstep <- diff(pretty(range(x$minmax), n=22))[1]
-    updateSliderInput(session, "valrangeB", label="Range of colorscale in map B",
+    updateSliderInput(session, "valrangeB", 
+                      label="B: Range of colorscale",
                       min=min(x$minmax), max=max(x$minmax),
                       step=xstep, value=x$x)
   })
+  
+  # Update y-axis range in time series
+  observe({
+    x <- sliderange(param=varA(), FUN="mean")
+    #xstep <- diff(pretty(range(x$minmax), n=22))[1]
+    #browser()
+    updateSliderInput(session, "tsrange", 
+                      label="Range of y-axis",
+                      label="A: Range of colorscale",
+                      min=min(x$minmax), max=max(x$minmax),
+                      step=xstep, value=x$x)
+  })
+  
 
   ## Path for finding file A (path.esd and path.rcm are defined in global.R)
   pathA <- reactive({
@@ -437,42 +472,6 @@ shinyServer(function(input, output, session) {
     )
   })
 
-  ## Information about ensemble A - for time series
-  output$InfoA <- renderText(
-    paste0(first2upper(input$srcA, all=FALSE, lower=FALSE), "<br>",
-           first2upper(input$varA), "<br>",
-           first2upper(input$seasA, all=FALSE, lower=FALSE), "<br>",
-           first2upper(input$sceA, all=FALSE, lower=FALSE), "<br>",
-           length(input$gcmsA), " simulations<br>")
-  )
-  
-  ## Information about ensemble A - for map
-  output$InfoA2 <- renderText(
-    paste0(first2upper(input$srcA, all=FALSE, lower=FALSE), "<br>",
-           first2upper(input$varA), "<br>",
-           first2upper(input$seasA, all=FALSE, lower=FALSE), "<br>",
-           first2upper(input$sceA, all=FALSE, lower=FALSE), "<br>",
-           length(input$gcmsA), " simulations<br>")
-  )
-
-  ## Information about ensemble B - for time series
-  output$InfoB <- renderText(paste0(
-    paste0(first2upper(input$srcB, all=FALSE, lower=FALSE), "<br>",
-           first2upper(input$varA), "<br>",
-           first2upper(input$seasA, all=FALSE, lower=FALSE), "<br>",
-           first2upper(input$sceB, all=FALSE, lower=FALSE), "<br>",
-           length(input$gcmsB), " simulations<br>")
-  ))
-
-  ## Information about ensemble B - for map
-  output$InfoB2 <- renderText(paste0(
-    paste0(first2upper(input$srcB, all=FALSE, lower=FALSE), "<br>",
-           first2upper(input$varA), "<br>",
-           first2upper(input$seasA, all=FALSE, lower=FALSE), "<br>",
-           first2upper(input$sceB, all=FALSE, lower=FALSE), "<br>",
-           length(input$gcmsB), " simulations<br>")
-  ))
-
   # Reactive plot function for saving map A
   mapA <- reactive({
     print('output$mapA')
@@ -504,8 +503,9 @@ shinyServer(function(input, output, session) {
     A <- zload_station_A()
     B <- zload_station_B()
     stplot(A, B, is=location(), it=c(1950,2100),
-             ylim=input$tsrangeA,
-             label1=labelA(), label2=labelB())
+           ylim=input$tsrange, main=maintitle(),
+           label1=labelA(), label2=labelB(),
+           normalize=input$normalize_ts)
   })#, height=function(){0.6*session$clientData$output_timeseries_width})
 
 
@@ -541,7 +541,8 @@ shinyServer(function(input, output, session) {
                colbar=list(breaks=pretty(input$valrangeA, n=22)),
                show.robustness = input$robustness_map, cex=1.4,
                xlim=xlimA(), ylim=ylimA(), verbose=FALSE,
-               threshold = 0.9, trends=pvalA())
+               threshold = 0.9, trends=pvalA(),
+               main=maintitle(), sub=labelA2lines())
   }, height=function(){1.0*session$clientData$output_mapA_width})
 
   ## Show map of ensemble B
@@ -553,7 +554,8 @@ shinyServer(function(input, output, session) {
                colbar=list(breaks=pretty(input$valrangeB, n=22)),
                show.robustness = input$robustness_map, cex=1.4,
                xlim=xlimB(), ylim=ylimB(), verbose=FALSE,
-               threshold = 0.9, trends=pvalB())
+               threshold = 0.9, trends=pvalB(),
+               main=maintitle(), sub=labelB2lines())
   }, height=function(){1.0*session$clientData$output_mapB_width})
 
   ## Save map A
