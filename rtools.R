@@ -298,7 +298,7 @@ sliderange <- function(param=NULL, FUN=NULL) {
                 #"fw"=c(0,1),
                 "fw"=c(0,100), # % instead of fraction
                 "mu"=c(0,15),
-                "t2m"=c(-15,30),
+                "t2m"=c(-10,30),
                 "tsd"=c(0,5),
                 c(-15,30))
   }
@@ -584,7 +584,7 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
   if(is.null(label2)) label2 <- "Ensemble B"
     
   cols <- c("red", "royalblue","yellow")
-
+  
   if(inherits(y_A, "dsensemble")) {
     mean_A <- apply(y_A, 1, mean)
     min_A <- apply(y_A, 1, min)
@@ -593,8 +593,8 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
     q95_A <- apply(y_A, 1, q95)
   } else {
     mean_A <- y_A
-    min_A <- attr(Z, "min")
-    max_A <- attr(Z, "max")
+    min_A <- attr(y_A, "min")
+    max_A <- attr(y_A, "max")
     q5_A <- rep(NULL, length(mean_A))
     q95_A <- rep(NULL, length(mean_A))
   }
@@ -612,7 +612,6 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
     q5_B <- rep(NA, length(mean_B))
     q95_B <- rep(NA, length(mean_B))
   }
-  
   if(normalize) {
     norm_A <- mean(mean_A[index(y_A)>=min(it_normalize) & 
                      index(y_A)<=max(it_normalize)])
@@ -629,7 +628,6 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
     q5_B <- q5_B - norm_B
     q95_B <- q95_B - norm_B
   }
-  
   d <- unique(index(y_A), index(y_B))
   sm <- data.frame(matrix(NA, ncol=7, nrow=length(d)))
   colnames(sm) <- c("date","mean_A","min_A","max_A",

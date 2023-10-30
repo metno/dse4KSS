@@ -24,8 +24,8 @@ source("calculate.trends.R")
 
 datelist <- list("1951-2100" = c(1951,2100),
                  "1951-1980" = c(1951,1980),
-                 "1990-2020" = c(1981,2010),
-                 "2031-2060" = c(2041,2070),
+                 "1991-2020" = c(1991,2010),
+                 "2041-2070" = c(2041,2070),
                  "2071-2100" = c(2071,2100))
 
 sourcelist <- c("empirical statistical downscaling (MetNo ESD)", 

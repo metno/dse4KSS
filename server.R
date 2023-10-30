@@ -58,7 +58,7 @@ shinyServer(function(input, output, session) {
   })
 
   maintitle <- reactive({
-    paste0("Seasonal mean ",input$varA," ", toupper(seasonA()))
+    paste0("Seasonal (",toupper(seasonA()),") mean ",input$varA)
   })
   
   # Label for ensemble A
@@ -277,11 +277,13 @@ shinyServer(function(input, output, session) {
   # Update y-axis range in time series
   observe({
     x <- sliderange(param=varA(), FUN="mean")
-    #xstep <- diff(pretty(range(x$minmax), n=22))[1]
-    #browser()
+    if(input$normalize_ts) {
+      x$minmax <- x$minmax - mean(x$minmax, na.rm=TRUE)
+      x$x <- x$x - mean(x$x, na.rm=TRUE)
+    }
+    xstep <- 1/ceiling(diff(x$minmax)/100)
     updateSliderInput(session, "tsrange", 
                       label="Range of y-axis",
-                      label="A: Range of colorscale",
                       min=min(x$minmax), max=max(x$minmax),
                       step=xstep, value=x$x)
   })
@@ -437,14 +439,7 @@ shinyServer(function(input, output, session) {
     paste("Dynamically downscaled <a href=https://www.euro-cordex.net/060376/index.php.en> EURO-CORDEX</a>... <br><br>",
           "The MetNo ESD ensemble was downscaled using a method developed by ",
           "<a href=https://doi.org/10.3402/tellusa.v67.28326>Benestad et al. 2015</a> at the Norwegian Meteorological Institute (MetNo). ",
-          "The method was applied to observational data from stations... reference to observational data. <br><br>",
-          "Emission scenarios describe the development of greenhouse gas concentrations in the atmosphere in the future. ",
-          "The scenarios are known as Shared Socioeconomic Pathways (<a href=https://climate-adapt.eea.europa.eu/en/metadata/portals/shared-socioeconomic-pathways-ssps-database>SSPs</a>) ",
-          "or Representative Concentration Pathways (<a href=https://pure.iiasa.ac.at/9505>RCPs</a>). ",
-          "The SSPs were used as input for climate models in the sixth climate model intercomparison project <a href=https://pcmdi.llnl.gov/CMIP6/>CMIP6</a> ",
-          "which provided a basis for the IPCCs sixth assessment report <a href=https://www.ipcc.ch/assessment-report/ar6/>AR6</a> ", 
-          "and RCPs for the previous generation climate models and report, <a href=https://pcmdi.llnl.gov/mips/cmip5/>CMIP5</a> and ",
-          "<a href=https://www.ipcc.ch/report/ar5/syr/>AR5</a>."
+          "The method was applied to observational data from stations... reference to observational data. <br><br>"
     )
   })
   
@@ -503,7 +498,7 @@ shinyServer(function(input, output, session) {
     A <- zload_station_A()
     B <- zload_station_B()
     stplot(A, B, is=location(), it=c(1950,2100),
-           ylim=input$tsrange, main=maintitle(),
+           ylim=input$tsrange, main=paste(maintitle(), "in", location()),
            label1=labelA(), label2=labelB(),
            normalize=input$normalize_ts)
   })#, height=function(){0.6*session$clientData$output_timeseries_width})
