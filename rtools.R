@@ -262,7 +262,30 @@ zload <- function(path="data/esd", type="field",
   return(Z)
 }
 
-
+zload_station <- function(path="data/esd", src="ESD", param="t2m", 
+                          season="djf", im=NULL, scenario="ssp585") {
+  Z <- zload(path=path, src=src, param=param, season=season, 
+             im=im, scenario=scenario)
+  attr(Z, "season") <- season
+  attr(Z, "scenario") <- scenario
+  if(inherits(Z,"dsensemble")) {
+    y <- as.station(Z)
+    attr(y, "variable") <- attr(Z, "variable")
+    attr(y, "longname") <- attr(Z, "longname")
+    attr(y, "unit") <- attr(Z, "unit")
+  } else {
+    y <- Z
+    Z <- zload(path=path, src=src, param=param, season=season, 
+               im=im, scenario=scenario, FUNX="mean")
+    ymax <- zload(path=path, src=src, param=param, season=season, 
+                  im=im, scenario=scenario, FUNX="max")
+    ymin <- zload(path=path, src=src, param=param, season=season, 
+                  im=im, scenario=scenario, FUNX="min")
+    attr(y, "max") <- ymax
+    attr(y, "min") <- ymin
+  }
+  return(y)
+}
 
 sliderange <- function(param=NULL, FUN=NULL) {
   if(is.null(param)) param <- "t2m"
@@ -361,15 +384,15 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
       attr(y, "mean") <- NULL
       m <- map(y,FUN='mean',plot=FALSE)
       if(show.stations | show.robustness) {
-        y_B <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=FALSE,verbose=verbose)
-        m2 <- map.station(y_B,FUN='mean',plot=FALSE) 
+        y2 <- expandpca(z,FUN=FUN,FUNX=FUNX,eof=FALSE,verbose=verbose)
+        m2 <- map.station(y2,FUN='mean',plot=FALSE) 
       }
     } else {
       y <- aggregate.dsensemble(z,FUNX=FUNX,eof=eof,verbose=verbose)
       m <- map(y,FUN=FUN,plot=FALSE)
       if(show.stations | show.robustness) {
-        y_B <- aggregate.dsensemble(z,FUN=FUNX,eof=FALSE,verbose=verbose)
-        m2 <- map.station(y_B,FUN=FUN,plot=FALSE)
+        y2 <- aggregate.dsensemble(z,FUN=FUNX,eof=FALSE,verbose=verbose)
+        m2 <- map.station(y2,FUN=FUN,plot=FALSE)
       }
     }
     if(FUN=="trend") {
@@ -513,8 +536,8 @@ mapgridded <- function(Z, MET='ESD', FUN='mean', FUNX='mean', eof=TRUE,
       if(is.null(im)) im <- rep(TRUE, nrow(trends))
       sig <- apply(trends[im,], 2, function(x) max(sum(x>0), sum(x<0))/length(x))
       s <- sig>=threshold | sig <= (1-threshold)
-      slonlat <- cbind(round(lon(y_B)[s], decimals), 
-                       round(lat(y_B)[s], decimals))
+      slonlat <- cbind(round(lon(y2)[s], decimals), 
+                       round(lat(y2)[s], decimals))
       slonlat <- slonlat[!duplicated(slonlat),]
       points(slonlat[,1], slonlat[,2], col='black', pch='.', cex=cex.robust)
     } else if(inherits(Z,"station")) {
@@ -545,101 +568,112 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
   if(!inherits(z1, "station")) z1 <- as.station(z1)
   if(!inherits(z2, "station")) z2 <- as.station(z2)
   
-  if(is.null(is)) {
-    is <- 1
-  } else {
-    is <- grep(cleanstr(tolower(is), "[a-z]"), stid(z1))
-    if(length(is)==0) is <- 1
-  }
-  
   if(is.null(it)) {
     it <- c(1950, 2100)
   } else {
     it <- range(as.numeric(it))
   }
   
-  y_A <- subset(z1, is=is, it=it, im=im1)
-  y_B <- subset(z2, is=is, it=it, im=im2)
+  if( !all(is.na(attr(z1,"station_id"))) ) {
+    is1 <- which(attr(z1,"station_id")==attr(is,"station_id"))
+  } else {
+    dA <- distAB(attr(is,"longitude"), attr(is,"latitude"),
+                 attr(z1,"longitude"), attr(z1,"latitude"))
+    is1 <- which.min(dA)
+  }
+  y1 <- subset(z1, is=is1, it=it, im=im1)
+  if(!is.null(attr(z1,"max"))) attr(y1,"max") <- subset(attr(z1,"max"), is=is1, it=it, im=im2)
+  if(!is.null(attr(z1,"min"))) attr(y1,"min") <- subset(attr(z1,"min"), is=is1, it=it, im=im2)
   
-  if(is.null(xlim)) xlim <- range(c(index(y_A), index(y_B)))
+  if( !all(is.na(attr(z2,"station_id"))) ) {
+    is2 <- which(attr(z2,"station_id")==attr(is,"station_id"))
+  } else {
+    dA <- distAB(attr(is,"longitude"), attr(is,"latitude"),
+                 attr(z2,"longitude"), attr(z2,"latitude"))
+    is2 <- which.min(dA)
+  }
+  y2 <- subset(z2, is=is2, it=it, im=im2)
+  if(!is.null(attr(z2,"max"))) attr(y2,"max") <- subset(attr(z2,"max"), is=is2, it=it, im=im2)
+  if(!is.null(attr(z2,"min"))) attr(y2,"min") <- subset(attr(z2,"min"), is=is2, it=it, im=im2)
+  
+  if(is.null(xlim)) xlim <- range(c(index(y1), index(y2)))
   if(is.null(ylim)) {
-    ylim <- range(c(range(y_A), range(y_B)))
+    ylim <- range(c(range(y1), range(y2)))
     ylim <- ylim + c(-1,1)*diff(ylim)*0.1
   }
   if(is.null(xlab)) {
-    if(is.years(index(y_A))) {
+    if(is.years(index(y1))) {
       xlab <- "Years"
-    } else if(is.dates(index(y_A))) {
+    } else if(is.dates(index(y1))) {
       xlab <- "Dates"
     } else xlab <- " "
   } 
   if(is.null(ylab)) {
-    ylab <- gsub("_"," ",attr(y_A,"longname"))
+    ylab <- gsub("_"," ",attr(y1,"longname"))
     if(normalize) ylab <- paste(ylab, "anomaly")
-    ylab <- paste0(ylab, "  (", attr(y_A, "unit"), ")")
+    ylab <- paste0(ylab, "  (", attr(y1, "unit"), ")")
   }
   if(is.null(main)) main <- " "
   
   if(is.null(label1)) label1 <- "Ensemble A"
   if(is.null(label2)) label2 <- "Ensemble B"
-    
-  cols <- c("red", "royalblue","yellow")
+    cols <- c("red", "royalblue","yellow")
   
-  if(inherits(y_A, "dsensemble")) {
-    mean_A <- apply(y_A, 1, mean)
-    min_A <- apply(y_A, 1, min)
-    max_A <- apply(y_A, 1, max)
-    q5_A <- apply(y_A, 1, q5)
-    q95_A <- apply(y_A, 1, q95)
+  if(inherits(y1, "dsensemble")) {
+    mean_A <- apply(y1, 1, mean)
+    min_A <- apply(y1, 1, min)
+    max_A <- apply(y1, 1, max)
+    q5_A <- apply(y1, 1, q5)
+    q95_A <- apply(y1, 1, q95)
   } else {
-    mean_A <- y_A
-    min_A <- attr(y_A, "min")
-    max_A <- attr(y_A, "max")
+    mean_A <- y1
+    min_A <- attr(y1, "min")
+    max_A <- attr(y1, "max")
     q5_A <- rep(NULL, length(mean_A))
     q95_A <- rep(NULL, length(mean_A))
   }
   
-  if(inherits(y_B, "dsensemble")) {
-    mean_B <- apply(y_B, 1, mean)
-    min_B <- apply(y_B, 1, min)
-    max_B <- apply(y_B, 1, max)
-    q5_B <- apply(y_B, 1, q5)
-    q95_B <- apply(y_B, 1, q95)
+  if(inherits(y2, "dsensemble")) {
+    mean_B <- apply(y2, 1, mean)
+    min_B <- apply(y2, 1, min)
+    max_B <- apply(y2, 1, max)
+    q5_B <- apply(y2, 1, q5)
+    q95_B <- apply(y2, 1, q95)
   } else {
-    mean_B <- y_B
-    min_B <- subset(attr(y_B, "min"), is=is, it=it)
-    max_B <- subset(attr(y_B, "max"), is=is, it=it)
+    mean_B <- y2
+    min_B <- attr(y2, "min")
+    max_B <- attr(y2, "max")
     q5_B <- rep(NA, length(mean_B))
     q95_B <- rep(NA, length(mean_B))
   }
   if(normalize) {
-    norm_A <- mean(mean_A[index(y_A)>=min(it_normalize) & 
-                     index(y_A)<=max(it_normalize)])
+    norm_A <- mean(mean_A[index(y1)>=min(it_normalize) & 
+                     index(y1)<=max(it_normalize)])
     mean_A <- mean_A - norm_A
     min_A <- min_A - norm_A
     max_A <- max_A - norm_A
     q5_A <- q5_A - norm_A
     q95_A <- q95_A - norm_A
-    norm_B <- mean(mean_B[index(y_B)>=min(it_normalize) & 
-                            index(y_B)<=max(it_normalize)])
+    norm_B <- mean(mean_B[index(y2)>=min(it_normalize) & 
+                            index(y2)<=max(it_normalize)])
     mean_B <- mean_B - norm_B
     min_B <- min_B - norm_B
     max_B <- max_B - norm_B
     q5_B <- q5_B - norm_B
     q95_B <- q95_B - norm_B
   }
-  d <- unique(index(y_A), index(y_B))
+  d <- unique(index(y1), index(y2))
   sm <- data.frame(matrix(NA, ncol=7, nrow=length(d)))
   colnames(sm) <- c("date","mean_A","min_A","max_A",
                     "mean_B","min_B","max_B")
-  i1 <- index(y_A) %in% d; i2 <- index(y_B) %in% d
+  i1 <- index(y1) %in% d; i2 <- index(y2) %in% d
   sm[,1] <- d
-  sm[,2] <- smooth.spline(index(y_A), mean_A)$y[i1]
-  sm[,3] <- smooth.spline(index(y_A), min_A)$y[i1]
-  sm[,4] <- smooth.spline(index(y_A), max_A)$y[i1]
-  sm[,5] <- smooth.spline(index(y_B), mean_B)$y[i2]
-  sm[,6] <- smooth.spline(index(y_B), min_B)$y[i2]
-  sm[,7] <- smooth.spline(index(y_B), max_B)$y[i2]
+  sm[,2] <- smooth.spline(index(y1), mean_A)$y[i1]
+  sm[,3] <- smooth.spline(index(y1), min_A)$y[i1]
+  sm[,4] <- smooth.spline(index(y1), max_A)$y[i1]
+  sm[,5] <- smooth.spline(index(y2), mean_B)$y[i2]
+  sm[,6] <- smooth.spline(index(y2), min_B)$y[i2]
+  sm[,7] <- smooth.spline(index(y2), max_B)$y[i2]
   
   plot_ly(x = sm$date, y = sm$mean_A, type = "scatter", 
           mode = "lines", color = I(cols[1]), name=label1,
@@ -662,3 +696,140 @@ stplot <- function(z1, z2, im1=NULL, im2=NULL,
   
 }
 
+
+seasoncycles <- function(z1, z2, im1=NULL, im2=NULL,
+                   is=NULL, it=list(list(c(1991,2010),
+                                         c(2041,2070),
+                                         c(2071,2100))), 
+                   xlim=NULL, ylim=NULL, 
+                   xlab=NULL, ylab=NULL, main=NULL,
+                   ylim2=NULL, ylab2=NULL,
+                   label1=NULL, label2=NULL,
+                   normalize=FALSE, it_normalize=c(1991,2020),
+                   mar=c(2,2,2,1), mgp=c(2.5,1,0.5),
+                   cex.axis=1, cex.lab=1.2, cex.main=1.2,
+                   new=FALSE, add=FALSE, verbose=FALSE, ...) {
+  ## Show seasonal cycles
+  
+  if(verbose) print('--- Plot seasonal cycles at individual stations ---')
+  if(!inherits(z1, "station")) z1 <- as.station(z1)
+  if(!inherits(z2, "station")) z2 <- as.station(z2)
+  
+  if(is.null(is)) {
+    is <- 1
+  } else {
+    is <- grep(cleanstr(tolower(is), "[a-z]"), stid(z1))
+    if(length(is)==0) is <- 1
+  }
+   
+  if(!is.list(it)) it <- list(it)
+  browser()
+  seasoncycles <- list()
+  for(timeslice in it) {
+    y1 <- subset(z1, is=is, im=im1, it=timeslice)
+    y2 <- subset(z2, is=is, im=im2, it=timeslice)
+    y1 <- as.monthly(y1, FUN="")
+    browser()
+  }
+  # y1 <- subset(z1, is=is, it=it, im=im1)
+  # y2 <- subset(z2, is=is, it=it, im=im2)
+  # 
+  # if(is.null(xlim)) xlim <- range(c(index(y1), index(y2)))
+  # if(is.null(ylim)) {
+  #   ylim <- range(c(range(y1), range(y2)))
+  #   ylim <- ylim + c(-1,1)*diff(ylim)*0.1
+  # }
+  # if(is.null(xlab)) {
+  #   if(is.years(index(y1))) {
+  #     xlab <- "Years"
+  #   } else if(is.dates(index(y1))) {
+  #     xlab <- "Dates"
+  #   } else xlab <- " "
+  # } 
+  # if(is.null(ylab)) {
+  #   ylab <- gsub("_"," ",attr(y1,"longname"))
+  #   if(normalize) ylab <- paste(ylab, "anomaly")
+  #   ylab <- paste0(ylab, "  (", attr(y1, "unit"), ")")
+  # }
+  # if(is.null(main)) main <- " "
+  # 
+  # if(is.null(label1)) label1 <- "Ensemble A"
+  # if(is.null(label2)) label2 <- "Ensemble B"
+  # 
+  # cols <- c("red", "royalblue","yellow")
+  
+  # if(inherits(y1, "dsensemble")) {
+  #   mean_A <- apply(y1, 1, mean)
+  #   min_A <- apply(y1, 1, min)
+  #   max_A <- apply(y1, 1, max)
+  #   q5_A <- apply(y1, 1, q5)
+  #   q95_A <- apply(y1, 1, q95)
+  # } else {
+  #   mean_A <- y1
+  #   min_A <- attr(y1, "min")
+  #   max_A <- attr(y1, "max")
+  #   q5_A <- rep(NULL, length(mean_A))
+  #   q95_A <- rep(NULL, length(mean_A))
+  # }
+  # 
+  # if(inherits(y2, "dsensemble")) {
+  #   mean_B <- apply(y2, 1, mean)
+  #   min_B <- apply(y2, 1, min)
+  #   max_B <- apply(y2, 1, max)
+  #   q5_B <- apply(y2, 1, q5)
+  #   q95_B <- apply(y2, 1, q95)
+  # } else {
+  #   mean_B <- y2
+  #   min_B <- subset(attr(y2, "min"), is=is, it=it)
+  #   max_B <- subset(attr(y2, "max"), is=is, it=it)
+  #   q5_B <- rep(NA, length(mean_B))
+  #   q95_B <- rep(NA, length(mean_B))
+  # }
+  # if(normalize) {
+  #   norm_A <- mean(mean_A[index(y1)>=min(it_normalize) & 
+  #                           index(y1)<=max(it_normalize)])
+  #   mean_A <- mean_A - norm_A
+  #   min_A <- min_A - norm_A
+  #   max_A <- max_A - norm_A
+  #   q5_A <- q5_A - norm_A
+  #   q95_A <- q95_A - norm_A
+  #   norm_B <- mean(mean_B[index(y2)>=min(it_normalize) & 
+  #                           index(y2)<=max(it_normalize)])
+  #   mean_B <- mean_B - norm_B
+  #   min_B <- min_B - norm_B
+  #   max_B <- max_B - norm_B
+  #   q5_B <- q5_B - norm_B
+  #   q95_B <- q95_B - norm_B
+  # }
+  # d <- unique(index(y1), index(y2))
+  # sm <- data.frame(matrix(NA, ncol=7, nrow=length(d)))
+  # colnames(sm) <- c("date","mean_A","min_A","max_A",
+  #                   "mean_B","min_B","max_B")
+  # i1 <- index(y1) %in% d; i2 <- index(y2) %in% d
+  # sm[,1] <- d
+  # sm[,2] <- smooth.spline(index(y1), mean_A)$y[i1]
+  # sm[,3] <- smooth.spline(index(y1), min_A)$y[i1]
+  # sm[,4] <- smooth.spline(index(y1), max_A)$y[i1]
+  # sm[,5] <- smooth.spline(index(y2), mean_B)$y[i2]
+  # sm[,6] <- smooth.spline(index(y2), min_B)$y[i2]
+  # sm[,7] <- smooth.spline(index(y2), max_B)$y[i2]
+  # 
+  # plot_ly(x = sm$date, y = sm$mean_A, type = "scatter", 
+  #         mode = "lines", color = I(cols[1]), name=label1,
+  #         line=list(color=I(cols[1]), width=4)) %>%
+  #   add_ribbons(x=sm$date, ymin=sm$min_A, ymax=sm$max_A, 
+  #               name="min-max", color=I(cols[1]),
+  #               line=list(color=I(cols[[1]]), opacity=0.4, width=0)) %>%
+  #   add_trace(x=sm$date, y=sm$mean_B, color=I(cols[2]), 
+  #             mode="lines", name=label2, 
+  #             line=list(color=I(cols[2]), width=4, dash="dash")) %>%
+  #   add_ribbons(p, x=sm$date, ymin=sm$min_B, ymax=sm$max_B, 
+  #               name="min-max", 
+  #               color=I(cols[2]), 
+  #               line=list(color=I(cols[2]), opacity=0.4, width=0)) %>%
+  #   layout(title = main, plot_bgcolor = "white", xaxis = list(title = xlab), 
+  #          yaxis = list(title = ylab, range = ylim),
+  #          legend = list(x=0, y=.95, traceorder="normal", bgcolor='rgba(0,0,0,0)',
+  #                        font = list(family = "sans-serif", size=12, color="black")))
+  
+}

@@ -96,26 +96,18 @@ maps <- box(width=NULL, title=HTML("<font size=+1.5 color='black'><b>Maps</b></f
 )
 
 
+
 body <- dashboardBody(
-  #fluidRow(
-  #  column(6, Abox),
-  #  column(6, Bbox)
-  #),
   fluidRow(
     tabsetPanel(
-      tabPanel("Time series",
+      tabPanel("Stations",
                timeseries),
       tabPanel("Maps", 
                maps),
       tabPanel("About the app",
                introbox)
     )
-  )#,
-  #fluidRow(
-  #  column(12,
-  #         introbox
-  #  )
-  #)
+  )
 )
 
 sideboard <- dashboardSidebar(
@@ -202,12 +194,16 @@ sideboard <- dashboardSidebar(
                                 inline=TRUE,
                                 width='100%')
     ),
-    menuItem("\n Plot settings - Time series", 
+    menuItem("\n Plot settings - Stations", 
              icon = icon("list"), tabname="settings_ts", startExpanded = FALSE,
              br(),
              checkboxInput("normalize_ts",
                            label = "Normalize",
                            value = FALSE),
+             selectInput("plottype_station",
+                           label = "Type of plot",
+                           choices = c("time series", "seasonal cycle"),
+                           selected = "time series"),
              sliderInput("tsrange", label="Range of y-axis",
                          min=-30, max=50, step = 1, value=c(-5,30))),
     menuItem("\n Plot settings - Maps", 

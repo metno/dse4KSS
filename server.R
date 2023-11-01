@@ -3,7 +3,17 @@ shinyServer(function(input, output, session) {
   #countview <- reactiveValues(i = 1)
 
   # Location
-  location <- reactive({ input$location })
+  location <- reactive({ 
+    x <- input$location
+    stid <- cleanstr(gsub(".*.\\(", "", x))
+    attr(x, "station_id") <- stid
+    attr(x, "location") <- cleanstr(gsub(stid, "", x))
+    i <- locs[[varA()]]$station_id == stid
+    attr(x, "longitude") <- locs[[varA()]]$longitude[i]
+    attr(x, "latitude") <- locs[[varA()]]$latitude[i]
+    attr(x, "altitude") <- locs[[varA()]]$altitude[i]
+    return(x)
+  })
   
   # Variable name - ensemble A
   varA <- reactive({ varname(input$varA, long=FALSE) })
@@ -325,6 +335,7 @@ shinyServer(function(input, output, session) {
     return(Z)
   })
 
+
   # Load data and transform to station data - ensemble A
   zload_station_A <- reactive({
     Z <- zload(path=pathA(), src=sourceA(), param=varA(), season=seasonA(), 
@@ -374,7 +385,23 @@ shinyServer(function(input, output, session) {
     }
     return(y)
   })
+  
+  # Load data and transform to station data - ensemble A
+  zload_station_allseasons_A <- reactive({
+    Z <- lapply(c("djf","mam","jja","son"), 
+                function(it) zload_station(path=pathA(), src=sourceA(), param=varA(), 
+                                           season=it, im=imA(), scenario=scenarioA()))
+    
+    return(Z)
+  })
 
+  zload_station_allseasons_B <- reactive({
+    Z <- lapply(c("djf","mam","jja","son"), 
+                function(it) zload_station(path=pathB(), src=sourceB(), param=varB(), 
+                                           season=it, im=imB(), scenario=scenarioB()))
+    return(Z)
+  })
+  
   ## Load p-value of trends for map A
   pvalA <- reactive({
     if(sourceA()=="ESD") {
@@ -469,38 +496,48 @@ shinyServer(function(input, output, session) {
 
   # Reactive plot function for saving map A
   mapA <- reactive({
-    print('output$mapA')
+    print('mapA')
     z <- zload_A()
-    mapgridded(z, it=itA(), verbose=FALSE,
+    mapgridded(z, it=itA(), oceanmask=input$landmask,
                FUN=input$funA, FUNX="mean", MET=sourceA(),
                colbar=list(breaks=pretty(input$valrangeA, n=22)),
-               show.robustness = input$robustness_map,
-               xlim=xlimA(), ylim=ylimA(), cex=1.4,
-               threshold = 0.9,
-               trends=pvalA())
+               show.robustness = input$robustness_map, cex=1.4,
+               xlim=xlimA(), ylim=ylimA(), verbose=FALSE,
+               threshold = 0.9, trends=pvalA(),
+               main=maintitle(), sub=labelA2lines())
   })
 
   # Reactive plot function for saving map B
   mapB <- reactive({
-    print('output$mapB')
+    print('mapB')
     z <- zload_B()
-    mapgridded(z, it=itA(), verbose=FALSE,
+    mapgridded(z, it=itB(), oceanmask=input$landmask,
                FUN=input$funB, FUNX="mean", MET=sourceB(),
                colbar=list(breaks=pretty(input$valrangeB, n=22)),
-               show.robustness = input$robustness_map,
-               xlim=xlimB(), ylim=ylimB(), cex=1.4,
-               threshold = 0.9, trends=pvalB())
+               show.robustness = input$robustness_map, cex=1.4,
+               xlim=xlimB(), ylim=ylimB(), verbose=FALSE,
+               threshold = 0.9, trends=pvalB(),
+               main=maintitle(), sub=labelB2lines())
   })
 
   ## Show time series of two data sets at a location
   output$timeseries <- renderPlotly({
     print('output$timeseries')
-    A <- zload_station_A()
-    B <- zload_station_B()
-    stplot(A, B, is=location(), it=c(1950,2100),
-           ylim=input$tsrange, main=paste(maintitle(), "in", location()),
-           label1=labelA(), label2=labelB(),
-           normalize=input$normalize_ts)
+    #if(input$plottype_station=="seasonal cycle") {
+    #  A <- zload_station_allseasons_A()
+    #  B <- zload_station_allseasons_B()
+    #  seasoncycles(A, B, is=location(), it=datelist,
+    #         ylim=input$tsrange, main=paste(maintitle(), "in", location()),
+    #         label1=labelA(), label2=labelB(),
+    #         normalize=input$normalize_ts)
+    #} else {
+      A <- zload_station_A()
+      B <- zload_station_B()
+      stplot(A, B, is=location(), it=c(1950,2100),
+             ylim=input$tsrange, main=paste(maintitle(), "in", location()),
+             label1=labelA(), label2=labelB(),
+             normalize=input$normalize_ts)
+    #}
   })#, height=function(){0.6*session$clientData$output_timeseries_width})
 
 

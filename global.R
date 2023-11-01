@@ -8,6 +8,7 @@ library(ggplot2)
 library(leaflet)
 library(plotly)
 library(raster)
+source("~/git/esd/R/distAB.R")
 
 ## Initial choice of region, variable etc
 var0 <- "t2m"
@@ -22,11 +23,9 @@ pattern.rcm <- c("ens","EUR-11","remapbil")
 source("rtools.R")
 source("calculate.trends.R")
 
-datelist <- list("1951-2100" = c(1951,2100),
-                 "1951-1980" = c(1951,1980),
-                 "1991-2020" = c(1991,2010),
-                 "2041-2070" = c(2041,2070),
-                 "2071-2100" = c(2071,2100))
+datelist <- list(c(1951,2100), c(1951,1980), c(1991,2010),
+                 c(2041,2070), c(2071,2100))
+names(datelist) <- sapply(datelist, function(x) paste0(x[1],"-",x[2]))
 
 sourcelist <- c("empirical statistical downscaling (MetNo ESD)", 
                 "dynamical downscaling (CORDEX RCM)")
